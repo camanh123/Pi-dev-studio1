@@ -150,13 +150,24 @@ class ToolRegistry:
     # Tools that are allowed in ``plan`` mode (read-only context gathering).
     PLAN_MODE_ALLOWED: frozenset[str] = frozenset({"bash_exec"})
 
-    def __init__(self, approval_handler: Any = None) -> None:
+    def __init__(
+        self,
+        approval_handler: Any = None,
+        pre_execute_hook: Any = None,
+    ) -> None:
         self._tools: dict[str, Tool] = {}
         # Optional async callable: (tool_name, params, session_id) -> str.
         # When set, replaces the env-var ApprovalManager for ask-mode gating so
         # the orchestrator can inject its own interactive approval flow (Redis
         # pub/sub + frontend dialog) without the submodule knowing about it.
         self._approval_handler = approval_handler
+        # Optional async callable invoked between scope check and edit-mode
+        # gating. Signature: (tool_name, parameters, context, tool) -> dict | None.
+        # Returning a dict short-circuits execution and the dict is returned
+        # to the caller verbatim (used by the orchestrator to wedge its
+        # automation ContractGate in front of every tool dispatch without
+        # the submodule taking a dependency on orchestrator-only models).
+        self._pre_execute_hook = pre_execute_hook
         logger.info("ToolRegistry initialized")
 
     def register(self, tool: Tool) -> None:
@@ -263,6 +274,18 @@ class ToolRegistry:
                     "tool": tool_name,
                     "error": scope_result,
                 }
+
+        # Pre-execute hook (e.g. orchestrator's automation ContractGate).
+        # Sits between API-key scoping and edit-mode gating so chat sessions
+        # without a hook installed are unaffected. A non-None return value is
+        # passed through verbatim — the hook owns the result envelope shape
+        # (denial, approval-required, etc.).
+        if self._pre_execute_hook is not None:
+            hook_result = await self._pre_execute_hook(
+                tool_name, parameters, context, tool
+            )
+            if hook_result is not None:
+                return hook_result
 
         # Edit-mode control — applies to every agent.
         edit_mode = context.get("edit_mode", "ask")
