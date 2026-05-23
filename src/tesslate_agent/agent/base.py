@@ -80,9 +80,21 @@ class AbstractAgent(ABC):
             if placeholder in result:
                 result = result.replace(placeholder, value)
 
-        tesslate_ctx = project_context.get("tesslate_context")
-        if tesslate_ctx:
-            result = result + "\n\n" + tesslate_ctx
+        # Append-keys: every entry in ``project_context`` that names a
+        # pre-formatted text block ends up concatenated onto the system
+        # prompt in the order listed. Each value is appended only if it's
+        # a non-empty string — None / "" / non-strings are skipped so a
+        # caller that stores something else under one of these keys never
+        # corrupts the prompt. Keep this list deterministic (alpha-by-purpose,
+        # not alpha-by-name) so a reader can trace what the agent saw.
+        #
+        # tesslate_context  — the project's TESSLATE.md (long-form docs)
+        # data_overview     — passive workspace-data store discovery block
+        # data_focus        — per-mention deep-dive (e.g. @data:subs)
+        for key in ("tesslate_context", "data_overview", "data_focus"):
+            block = project_context.get(key)
+            if isinstance(block, str) and block.strip():
+                result = result + "\n\n" + block
 
         return result
 
