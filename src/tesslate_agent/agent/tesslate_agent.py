@@ -238,6 +238,9 @@ def format_tool_result(result: dict[str, Any]) -> str:
             if "message" in tool_result:
                 parts.append(str(tool_result["message"]))
 
+            # Special-case formatting for known streaming-friendly fields
+            # — these get unwrapped from quotes so multi-line output renders
+            # naturally. Truncated in the middle if oversize.
             for field_name in ("content", "stdout", "output", "preview"):
                 if field_name in tool_result:
                     output = str(tool_result[field_name])
@@ -257,6 +260,37 @@ def format_tool_result(result: dict[str, Any]) -> str:
 
             if tool_result.get("stderr"):
                 parts.append(f"stderr: {tool_result['stderr']}")
+
+            # Surface every OTHER structured field as JSON so the model can
+            # see it. Without this, tools that return payload data under
+            # names like ``records``, ``top_values``, ``fields``, ``sample``
+            # would silently drop their data — the model receives only the
+            # ``message`` field and (truthfully) reports it cannot find the
+            # data the message references. This used to manifest as the
+            # model fabricating "plausible" records to fill the gap, which
+            # the platform-wide tool-truthfulness contract now forbids — so
+            # if we don't surface the data here, the model has no path to
+            # an honest answer.
+            _SUPPRESS = {
+                "message", "content", "stdout", "output", "preview",
+                "files", "stderr", "success", "tool", "session_id",
+                "approval_required", "response", "details",
+            }
+            extras = {k: v for k, v in tool_result.items() if k not in _SUPPRESS}
+            if extras:
+                try:
+                    extras_json = json.dumps(extras, default=str)
+                except Exception:
+                    extras_json = repr(extras)
+                if len(extras_json) > MAX_TOOL_OUTPUT:
+                    half = MAX_TOOL_OUTPUT // 2
+                    elided = len(extras_json) - MAX_TOOL_OUTPUT
+                    extras_json = (
+                        f"{extras_json[:half]}\n"
+                        f"... ({elided} chars truncated) ...\n"
+                        f"{extras_json[-half:]}"
+                    )
+                parts.append(extras_json)
 
             return "\n".join(parts) if parts else json.dumps(tool_result)
         return str(tool_result)

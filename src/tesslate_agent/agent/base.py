@@ -41,6 +41,67 @@ class AbstractAgent(ABC):
         self.system_prompt = system_prompt
         self.tools = tools
 
+    # ------------------------------------------------------------------
+    # System-wide guardrails
+    # ------------------------------------------------------------------
+    # These blocks are prepended to EVERY agent's system prompt, before
+    # the agent's own template. They define non-negotiable behaviour the
+    # platform itself cares about — primarily, tool-result truthfulness.
+    #
+    # If you find yourself adding a per-agent system-prompt clause to fix
+    # a fabrication / hallucination problem, add it here instead — that
+    # way all agents benefit and the fix can't be lost when a marketplace
+    # agent is forked.
+    _TOOL_TRUTHFULNESS_CONTRACT = (
+        "=== TOOL RESULT TRUTHFULNESS (non-negotiable) ===\n"
+        "Tool results are the ONLY source of truth for facts about the\n"
+        "user's data, environment, and code. Hold the following rules\n"
+        "absolutely:\n"
+        "\n"
+        "1. NEVER invent record IDs, emails, names, file paths,\n"
+        "   timestamps, counts, status values, URLs, or any other concrete\n"
+        "   datum that did not appear in a tool result. If a tool returned\n"
+        "   no records or no value for a field, say exactly that — do not\n"
+        "   illustrate with a 'plausible example'.\n"
+        "\n"
+        "2. When reporting on tool output, quote primitives (IDs, counts,\n"
+        "   values, fields) VERBATIM as the tool returned them. Do not\n"
+        "   round, paraphrase, reorder, or 'tidy up' numbers.\n"
+        "\n"
+        "3. If you cannot find the data you need in a tool result, call\n"
+        "   another tool to get it. Do not fall back to your own memory\n"
+        "   of similar projects or pre-training data.\n"
+        "\n"
+        "4. If a tool returned a result you did not expect (or returned\n"
+        "   nothing), report that honestly: \"the tool returned 0 records\",\n"
+        "   \"the field is absent in every sampled record\", etc. Surprising\n"
+        "   results are signal, not something to paper over.\n"
+        "\n"
+        "5. When summarising bounded analysis (e.g. ``aggregate`` with\n"
+        "   ``sample_size``), state the bound: \"based on the most recent\n"
+        "   N of total M records\". Never present a sampled result as exact.\n"
+        "\n"
+        "6. READ THE WHOLE TOOL RESULT. Tool results are JSON, and most\n"
+        "   tools return a thin ``{success, message, ...}`` wrapper PLUS\n"
+        "   the payload data alongside it (e.g. ``records: [...]``,\n"
+        "   ``top_values: [...]``, ``fields: {...}``). Do NOT claim a\n"
+        "   tool 'only returned a success message' when the same JSON\n"
+        "   object also contains the data you asked for. If you can't\n"
+        "   find a key, scan the entire result before deciding it's\n"
+        "   absent — and certainly before escalating to a different tool\n"
+        "   that bypasses the documented one.\n"
+        "\n"
+        "7. Do NOT bypass a structured tool with raw shell / filesystem\n"
+        "   access when the structured tool already returned the answer.\n"
+        "   ``workspace_data query``, ``list_collections``, ``summarize``,\n"
+        "   etc. ARE the canonical way to read the data store — there is\n"
+        "   no underlying file to ``grep`` in lieu of them.\n"
+        "\n"
+        "Violating any of these rules is a session-ending failure: the\n"
+        "user can no longer trust any later claim you make. When in\n"
+        "doubt, run the tool again rather than guess.\n"
+    )
+
     def get_processed_system_prompt(self, context: dict[str, Any]) -> str:
         """
         Return the system prompt with ``{marker}`` placeholders resolved
@@ -58,6 +119,10 @@ class AbstractAgent(ABC):
         is set, its content (the project's TESSLATE.md) is appended to the system prompt
         unconditionally so all agents receive project-specific documentation without
         needing an explicit ``{tesslate_context}`` placeholder in their template.
+
+        The platform-wide :attr:`_TOOL_TRUTHFULNESS_CONTRACT` block is
+        prepended to every agent's prompt so per-agent or per-skill drift
+        cannot remove it.
         """
         project_context = context.get("project_context") or {}
         tool_names = (
@@ -74,7 +139,11 @@ class AbstractAgent(ABC):
             "user_name": str(context.get("user_name", "")),
             "tool_list": ", ".join(tool_names),
         }
-        result = self.system_prompt
+        # Prepend the platform-wide tool-truthfulness contract. Goes FIRST
+        # so it survives any per-agent prompt that re-defines tone or
+        # output style afterward — model attention to early tokens is
+        # higher, and the contract is the floor, not the ceiling.
+        result = self._TOOL_TRUTHFULNESS_CONTRACT + "\n" + self.system_prompt
         for marker, value in markers.items():
             placeholder = "{" + marker + "}"
             if placeholder in result:
