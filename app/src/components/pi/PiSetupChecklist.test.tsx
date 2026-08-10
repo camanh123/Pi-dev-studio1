@@ -33,4 +33,25 @@ describe('PiSetupChecklist', () => {
     expect(screen.getByText('Developer Portal app network')).toBeInTheDocument();
     expect(screen.getByText('Payment DTO network')).toBeInTheDocument();
   });
+
+  it('guides AgentSkillAssignment for recommended Pi skills', () => {
+    render(<PiSetupChecklist baseSlug="pi-web-starter" />);
+    expect(screen.getByTestId('pi-skill-assignment-guidance')).toHaveTextContent(
+      /does not auto-assign/i
+    );
+    expect(screen.getByTestId('pi-skill-assignment-guidance')).toHaveTextContent(
+      /AgentSkillAssignment/
+    );
+    const skills = screen.getByTestId('pi-recommended-skills');
+    expect(skills).toHaveTextContent('pi-sdk');
+    expect(skills).toHaveTextContent('pi-browser');
+    expect(skills).not.toHaveTextContent('pi-payments');
+  });
+
+  it('recommends payment skills for payments starter', () => {
+    render(<PiSetupChecklist baseSlug="pi-payments-starter" />);
+    const skills = screen.getByTestId('pi-recommended-skills');
+    expect(skills).toHaveTextContent('pi-payments');
+    expect(skills).toHaveTextContent('pi-platform-api');
+  });
 });

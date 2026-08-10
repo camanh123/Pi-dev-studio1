@@ -14,6 +14,7 @@ import {
   PI_PAYMENTS_STARTER_SLUG,
   PI_STARTER_SUMMARIES,
   PI_WIZARD_STEPS,
+  getRecommendedPiSkillsForBase,
   type PiBaseSlug,
   isPiBaseSlug,
 } from '../../lib/piDevStudio';
@@ -22,6 +23,8 @@ export interface PiSetupChecklistProps {
   baseSlug: string;
   /** When true, show Phase 1 knowledge provenance note. */
   showKnowledgeNote?: boolean;
+  /** When true, show recommended Pi skill attachment guidance (default true). */
+  showSkillGuidance?: boolean;
   compact?: boolean;
   className?: string;
 }
@@ -29,6 +32,7 @@ export interface PiSetupChecklistProps {
 export function PiSetupChecklist({
   baseSlug,
   showKnowledgeNote = false,
+  showSkillGuidance = true,
   compact = false,
   className = '',
 }: PiSetupChecklistProps) {
@@ -37,6 +41,7 @@ export function PiSetupChecklist({
   const summary = PI_STARTER_SUMMARIES[baseSlug as PiBaseSlug];
   const isAuth = baseSlug === PI_AUTH_STARTER_SLUG || baseSlug === PI_PAYMENTS_STARTER_SLUG;
   const isPayments = baseSlug === PI_PAYMENTS_STARTER_SLUG;
+  const recommendedSkills = getRecommendedPiSkillsForBase(baseSlug);
 
   return (
     <section
@@ -96,6 +101,38 @@ export function PiSetupChecklist({
           </li>
         ))}
       </ol>
+
+      {showSkillGuidance && recommendedSkills.length > 0 && (
+        <div
+          className="mb-3 rounded-[var(--radius-small)] border border-[var(--border)] bg-[var(--bg)] p-2.5"
+          data-testid="pi-skill-assignment-guidance"
+        >
+          <div className="mb-1 text-[10px] font-medium uppercase tracking-wide text-[var(--text-subtle)]">
+            Attach recommended Pi skills
+          </div>
+          <p className="mb-2 text-[11px] leading-snug text-[var(--text-muted)]">
+            Creating a Pi starter does not auto-assign skills. Use the existing Marketplace flow:
+            purchase each skill, then install it on your project agent (
+            <code className="text-[10px]">AgentSkillAssignment</code>
+            ). Until then, <code className="text-[10px]">load_skill</code> cannot resolve these
+            slugs.
+          </p>
+          <ul className="mb-2 flex flex-wrap gap-1.5" data-testid="pi-recommended-skills">
+            {recommendedSkills.map((skillSlug) => (
+              <li
+                key={skillSlug}
+                className="rounded-[var(--radius-small)] border border-[var(--border)] px-1.5 py-0.5 font-mono text-[10px] text-[var(--text)]"
+              >
+                {skillSlug}
+              </li>
+            ))}
+          </ul>
+          <p className="text-[10px] leading-snug text-[var(--text-subtle)]">
+            Path: Marketplace → Skills → purchase → install on agent. Do not invent privileged
+            payment tools or mark Pi skills as builtin.
+          </p>
+        </div>
+      )}
 
       {isAuth && (
         <div

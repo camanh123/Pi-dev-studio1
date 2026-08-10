@@ -62,6 +62,10 @@ PaymentLocalStatus = Literal[
     "incomplete_handled",
 ]
 
+# Local statuses that must not be overwritten by a later Platform 4xx race
+# (e.g. duplicate approve after success already recorded locally).
+_PROTECTED_LOCAL_STATUSES = frozenset({"approved", "completed"})
+
 _payment_lock = threading.Lock()
 _payment_records: dict[str, dict[str, Any]] = {}
 
@@ -116,8 +120,13 @@ def _upsert_payment_record(
     now = datetime.now(timezone.utc).isoformat()
     with _payment_lock:
         existing = _payment_records.get(payment_id, {})
+        existing_status = existing.get("status")
         # Idempotent completion: do not downgrade a completed record.
-        if existing.get("status") == "completed" and status != "completed":
+        if existing_status == "completed" and status != "completed":
+            return existing
+        # Never let a failed Platform response overwrite a prior success.
+        # Duplicate approve/complete races can return non-2xx after success.
+        if status == "failed" and existing_status in _PROTECTED_LOCAL_STATUSES:
             return existing
         record = {
             **existing,
@@ -130,6 +139,25 @@ def _upsert_payment_record(
         }
         _payment_records[payment_id] = record
         return record
+
+
+def _platform_status_to_local(platform_payload: dict[str, Any]) -> PaymentLocalStatus | None:
+    """Map documented Platform payment status strings to local starter status.
+
+    Returns None when the payload does not confirm a protected success state.
+    Never invents success from missing/unknown fields.
+    """
+    raw = platform_payload.get("status")
+    if not isinstance(raw, str):
+        return None
+    normalized = raw.strip().lower()
+    if normalized in {"completed", "complete"}:
+        return "completed"
+    if normalized in {"approved", "developer_approved"}:
+        return "approved"
+    if normalized in {"cancelled", "canceled", "user_cancelled", "user_canceled"}:
+        return "cancelled"
+    return None
 
 
 async def _platform_request(
@@ -152,6 +180,61 @@ async def _platform_request(
             status_code=502,
             detail="Failed to reach Pi Platform API",
         ) from None
+
+
+async def _reconcile_after_platform_error(
+    payment_id: str,
+    *,
+    attempted: str,
+    status_code: int,
+    txid: str | None = None,
+) -> dict[str, Any]:
+    """On Platform non-2xx, GET payment and align local state when possible.
+
+    Frontend callbacks alone never mark success. A duplicate approve/complete
+    that returns 4xx must not downgrade a locally approved/completed payment.
+    """
+    note = f"{attempted}:{status_code}"
+    try:
+        get_response = await _platform_request("GET", f"/payments/{payment_id}")
+    except HTTPException:
+        return _upsert_payment_record(
+            payment_id, status="failed", txid=txid, note=f"{note}:get-unreachable"
+        )
+
+    if get_response.status_code >= 400:
+        return _upsert_payment_record(
+            payment_id, status="failed", txid=txid, note=f"{note}:get:{get_response.status_code}"
+        )
+
+    try:
+        platform = get_response.json()
+    except ValueError:
+        return _upsert_payment_record(
+            payment_id, status="failed", txid=txid, note=f"{note}:get-invalid-json"
+        )
+
+    if not isinstance(platform, dict):
+        return _upsert_payment_record(
+            payment_id, status="failed", txid=txid, note=f"{note}:get-non-object"
+        )
+
+    mapped = _platform_status_to_local(platform)
+    if mapped in _PROTECTED_LOCAL_STATUSES:
+        platform_txid = None
+        transaction = platform.get("transaction")
+        if isinstance(transaction, dict):
+            raw_txid = transaction.get("txid")
+            if isinstance(raw_txid, str) and raw_txid.strip():
+                platform_txid = raw_txid.strip()
+        return _upsert_payment_record(
+            payment_id,
+            status=mapped,
+            txid=txid or platform_txid,
+            note=f"{note}:reconciled",
+        )
+
+    return _upsert_payment_record(payment_id, status="failed", txid=txid, note=note)
 
 
 @app.get("/")
@@ -238,7 +321,18 @@ async def approve_payment(payment_id: str):
         f"/payments/{payment_id}/approve",
     )
     if response.status_code >= 400:
-        _upsert_payment_record(payment_id, status="failed", note=f"approve:{response.status_code}")
+        record = await _reconcile_after_platform_error(
+            payment_id,
+            attempted="approve",
+            status_code=response.status_code,
+        )
+        if record.get("status") in _PROTECTED_LOCAL_STATUSES:
+            return {
+                "payment_id": payment_id,
+                "status": record["status"],
+                "idempotent": True,
+                "reconciled": True,
+            }
         raise HTTPException(
             status_code=502,
             detail=f"Pi Platform approve returned status {response.status_code}",
@@ -274,13 +368,23 @@ async def complete_payment(payment_id: str, payload: CompletePaymentRequest):
         json_body={"txid": txid},
     )
     if response.status_code >= 400:
-        # Official U2A guidance: do not mark complete on non-success responses.
-        _upsert_payment_record(
+        # Official U2A guidance: do not mark complete on non-success responses
+        # alone. Reconcile via GET so duplicate-complete 4xx cannot downgrade
+        # an already-completed (or approved) local record.
+        record = await _reconcile_after_platform_error(
             payment_id,
-            status="failed",
+            attempted="complete",
+            status_code=response.status_code,
             txid=txid,
-            note=f"complete:{response.status_code}",
         )
+        if record.get("status") == "completed":
+            return {
+                "payment_id": payment_id,
+                "status": "completed",
+                "txid": record.get("txid"),
+                "idempotent": True,
+                "reconciled": True,
+            }
         raise HTTPException(
             status_code=502,
             detail=f"Pi Platform complete returned status {response.status_code}",
@@ -353,12 +457,19 @@ async def handle_incomplete_payment(payload: IncompletePaymentRequest):
             json_body={"txid": txid},
         )
         if response.status_code >= 400:
-            _upsert_payment_record(
+            record = await _reconcile_after_platform_error(
                 payment_id,
-                status="failed",
+                attempted="incomplete-complete",
+                status_code=response.status_code,
                 txid=txid,
-                note=f"incomplete-complete:{response.status_code}",
             )
+            if record.get("status") == "completed":
+                return {
+                    "payment_id": payment_id,
+                    "status": record["status"],
+                    "detail": "Incomplete payment already completed (reconciled via Platform GET).",
+                    "reconciled": True,
+                }
             raise HTTPException(
                 status_code=502,
                 detail=f"Incomplete recovery complete returned {response.status_code}",
@@ -380,11 +491,18 @@ async def handle_incomplete_payment(payload: IncompletePaymentRequest):
         f"/payments/{payment_id}/approve",
     )
     if response.status_code >= 400:
-        _upsert_payment_record(
+        record = await _reconcile_after_platform_error(
             payment_id,
-            status="failed",
-            note=f"incomplete-approve:{response.status_code}",
+            attempted="incomplete-approve",
+            status_code=response.status_code,
         )
+        if record.get("status") in _PROTECTED_LOCAL_STATUSES:
+            return {
+                "payment_id": payment_id,
+                "status": record["status"],
+                "detail": "Incomplete payment already approved/completed (reconciled via Platform GET).",
+                "reconciled": True,
+            }
         raise HTTPException(
             status_code=502,
             detail=f"Incomplete recovery approve returned {response.status_code}",

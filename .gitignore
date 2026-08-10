@@ -228,6 +228,11 @@ k8s/overlays/*/generated-*.yaml
 # uv.lockbackups/
 nul
 
+# Local Phase audit artifacts (must not ship in release / clean-room gates)
+packages/tesslate-marketplace/app/bundles/skill/workspace-data-*/
+bases/pi-*/frontend/package-lock.json
+bases/pi-*/frontend/dist/
+
 # Code Analysis Output
 analysis-output/
 /.playwright-mcp
