@@ -36,12 +36,16 @@ packages/pi-integration/
 ```text
 packages/pi-integration/knowledge/
         ↓
-marketplace skill seeds (Phase 2)
+marketplace skill seeds (Phase 2: packages/tesslate-marketplace/app/seeds/skills_pi.json)
         ↓
 load_skill progressive disclosure
         ↓
 AI agent (unchanged runner)
 ```
+
+Phase 2 Pi skills (`pi-sdk`, `pi-auth`, `pi-platform-api`, `pi-payments`,
+`pi-developer-portal`, `pi-browser`, `pi-compliance`) cite catalog entry IDs
+from this package. Do not treat skill bodies as a second provenance authority.
 
 ## Usage
 
