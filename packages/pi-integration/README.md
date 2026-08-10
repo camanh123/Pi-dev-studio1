@@ -55,6 +55,10 @@ Phase 4 MarketplaceBase `pi-auth-starter` (`bases/pi-auth-starter/`) adds
 generated-app `Pi.authenticate` + backend `GET /v2/me` verification from this
 catalog. It does not modify OpenSail platform authentication.
 
+Phase 5 MarketplaceBase `pi-payments-starter` (`bases/pi-payments-starter/`)
+adds generated-app U2A payments (`Pi.createPayment` + `/approve` + `/complete`)
+from this catalog. It does not replace OpenSail Stripe / Team credits billing.
+
 ## Usage
 
 ```python

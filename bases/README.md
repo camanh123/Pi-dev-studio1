@@ -10,7 +10,6 @@ create-project via `git clone` of `git_repo_url`.
 |-------|-------|
 | Slug | `pi-web-starter` |
 | In-repo source | `bases/pi-web-starter/` |
-| Clone URL | `https://github.com/camanh123/Pi-dev-studio1.git` |
 | Clone branch | `base/pi-web-starter` |
 
 ```bash
@@ -23,15 +22,28 @@ create-project via `git clone` of `git_repo_url`.
 |-------|-------|
 | Slug | `pi-auth-starter` |
 | In-repo source | `bases/pi-auth-starter/` |
-| Clone URL | `https://github.com/camanh123/Pi-dev-studio1.git` |
 | Clone branch | `base/pi-auth-starter` |
 
 ```bash
 ./scripts/publish-pi-auth-starter-base.sh
 ```
 
-Extends Web Starter with generated-app `Pi.authenticate` + backend
-`GET /v2/me` verification. Not OpenSail authentication. Payments deferred.
+## Pi Payments Starter
 
-Both bases keep the existing MarketplaceBase git-acquisition path without
-inventing a second template system.
+| Field | Value |
+|-------|-------|
+| Slug | `pi-payments-starter` |
+| In-repo source | `bases/pi-payments-starter/` |
+| Clone URL | `https://github.com/camanh123/Pi-dev-studio1.git` |
+| Clone branch | `base/pi-payments-starter` |
+
+```bash
+./scripts/publish-pi-payments-starter-base.sh
+```
+
+Extends Auth Starter with generated-app U2A payments (`Pi.createPayment` +
+server approve/complete). Not OpenSail Stripe billing. A2U/refunds/webhooks
+out of scope.
+
+All Pi bases share clone URL `https://github.com/camanh123/Pi-dev-studio1.git`
+and keep the existing MarketplaceBase git-acquisition path.
