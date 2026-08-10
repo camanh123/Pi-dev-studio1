@@ -7,7 +7,7 @@
     "git_repo_url": "https://github.com/TesslateAI/Studio-NextJS-16-Base.git",
     "default_branch": "main",
     "category": "fullstack",
-    "icon": "\u26a1",
+    "icon": "⚡",
     "tags": [
       "nextjs",
       "react",
@@ -55,7 +55,7 @@
     "git_repo_url": "https://github.com/TesslateAI/Studio-Vite-React-FastAPI-Base.git",
     "default_branch": "main",
     "category": "fullstack",
-    "icon": "\ud83d\udc0d",
+    "icon": "🐍",
     "tags": [
       "vite",
       "react",
@@ -97,7 +97,7 @@
     "git_repo_url": "https://github.com/TesslateAI/Studio-Vite-React-Go-Base.git",
     "default_branch": "main",
     "category": "fullstack",
-    "icon": "\ud83d\udd37",
+    "icon": "🔷",
     "tags": [
       "vite",
       "react",
@@ -141,7 +141,7 @@
     "git_repo_url": "https://github.com/TesslateAI/Studio-Expo-Base.git",
     "default_branch": "main",
     "category": "mobile",
-    "icon": "\ud83d\udcf1",
+    "icon": "📱",
     "tags": [
       "expo",
       "react-native",
@@ -173,6 +173,51 @@
       "React 19.2",
       "TypeScript 5.9",
       "Metro"
+    ],
+    "is_featured": true,
+    "is_active": true,
+    "kind": "base",
+    "is_published": true
+  },
+  {
+    "name": "Pi Web Starter",
+    "slug": "pi-web-starter",
+    "description": "A minimal self-hosted web application starter with the official Pi JavaScript SDK loaded from the documented Pi CDN and initialized for Pi Browser/sandbox development. Authentication and payments are intentionally excluded.",
+    "long_description": "Pi-compatible Vite + React + FastAPI shell that loads https://sdk.minepi.com/pi-sdk.js and calls Pi.init({ version: \"2.0\", sandbox }). Includes Developer Portal setup docs and clear boundaries: no Pi.authenticate, no /v2/me, no payments, no Server API Key, no App Studio automation. Primary skill: pi-sdk. Related: pi-developer-portal, pi-browser. Auth and payments deferred to later starters/skills.",
+    "git_repo_url": "https://github.com/camanh123/Pi-dev-studio1.git",
+    "default_branch": "base/pi-web-starter",
+    "category": "fullstack",
+    "icon": "Pi",
+    "tags": [
+      "pi",
+      "sdk",
+      "vite",
+      "react",
+      "fastapi",
+      "sandbox",
+      "browser",
+      "starter"
+    ],
+    "pricing_type": "free",
+    "price": 0,
+    "downloads": 0,
+    "rating": 5.0,
+    "reviews_count": 0,
+    "features": [
+      "Official Pi SDK CDN",
+      "Pi.init version 2.0",
+      "Sandbox-aware config",
+      "Minimal FastAPI health backend",
+      "Developer Portal checklist",
+      "Auth/payments deferred"
+    ],
+    "tech_stack": [
+      "Pi SDK 2.0",
+      "Vite",
+      "React",
+      "TypeScript",
+      "FastAPI",
+      "Python"
     ],
     "is_featured": true,
     "is_active": true,
