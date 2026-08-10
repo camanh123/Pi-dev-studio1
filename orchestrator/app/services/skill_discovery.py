@@ -34,6 +34,10 @@ class SkillCatalogEntry:
     skill_id: UUID | None = None
     file_path: str | None = None
     is_builtin: bool = False
+    # MarketplaceAgent.slug when source is builtin/db. load_skill accepts
+    # either display name or slug so progressive-disclosure instructions that
+    # cite ``skill_name: pi-sdk`` resolve correctly.
+    slug: str | None = None
 
 
 async def discover_skills(
@@ -116,6 +120,7 @@ async def _discover_builtin_skills(db: AsyncSession) -> list[SkillCatalogEntry]:
                 MarketplaceAgent.id,
                 MarketplaceAgent.name,
                 MarketplaceAgent.description,
+                MarketplaceAgent.slug,
             ).where(
                 MarketplaceAgent.is_builtin.is_(True),
                 MarketplaceAgent.is_active.is_(True),
@@ -130,6 +135,7 @@ async def _discover_builtin_skills(db: AsyncSession) -> list[SkillCatalogEntry]:
                 source="builtin",
                 skill_id=row.id,
                 is_builtin=True,
+                slug=row.slug,
             )
             for row in rows
         ]
@@ -146,7 +152,12 @@ async def _discover_db_skills(
         from ..models import AgentSkillAssignment, MarketplaceAgent
 
         result = await db.execute(
-            select(MarketplaceAgent.id, MarketplaceAgent.name, MarketplaceAgent.description)
+            select(
+                MarketplaceAgent.id,
+                MarketplaceAgent.name,
+                MarketplaceAgent.description,
+                MarketplaceAgent.slug,
+            )
             .join(
                 AgentSkillAssignment,
                 AgentSkillAssignment.skill_id == MarketplaceAgent.id,
@@ -167,6 +178,7 @@ async def _discover_db_skills(
                 description=row.description,
                 source="db",
                 skill_id=row.id,
+                slug=row.slug,
             )
             for row in rows
         ]
