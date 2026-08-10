@@ -5,10 +5,12 @@ import {
   PI_FEATURE_FLAGS,
   PI_PAYMENTS_STARTER_SLUG,
   PI_SKILL_SLUGS,
+  PI_SKILLS_FOR_PROMPT,
   PI_WEB_STARTER_SLUG,
   PI_WIZARD_STEPS,
   clearPiSetupBaseSlug,
   getEnabledPiFeaturedSlugs,
+  getRecommendedPiSkillsForBase,
   isPiBaseVisible,
   isPiSkillVisible,
   persistPiSetupBaseSlug,
@@ -96,7 +98,27 @@ describe('piDevStudio Phase 6 helpers', () => {
     expect(text).toMatch(/sandbox/i);
     expect(text).toMatch(/Developer Portal/i);
     expect(text).toMatch(/payment DTO network/i);
+    expect(text).toMatch(/AgentSkillAssignment/);
     expect(text).not.toMatch(/sandbox\s*=\s*Testnet/i);
     expect(text).not.toMatch(/Sign in to OpenSail with Pi/i);
+  });
+
+  it('maps recommended skills per starter without auto-assign implication', () => {
+    expect(getRecommendedPiSkillsForBase(PI_WEB_STARTER_SLUG)).toEqual(
+      expect.arrayContaining(['pi-sdk', 'pi-browser'])
+    );
+    expect(getRecommendedPiSkillsForBase(PI_WEB_STARTER_SLUG)).not.toContain('pi-payments');
+    expect(getRecommendedPiSkillsForBase(PI_AUTH_STARTER_SLUG)).toEqual(
+      expect.arrayContaining(['pi-auth', 'pi-platform-api'])
+    );
+    expect(getRecommendedPiSkillsForBase(PI_PAYMENTS_STARTER_SLUG)).toEqual(
+      expect.arrayContaining(['pi-payments', 'pi-platform-api'])
+    );
+    expect(PI_SKILLS_FOR_PROMPT['add-pi-login']).toEqual(
+      expect.arrayContaining(['pi-auth', 'pi-sdk', 'pi-browser'])
+    );
+    expect(PI_SKILLS_FOR_PROMPT['add-pi-payment']).toEqual(
+      expect.arrayContaining(['pi-payments', 'pi-platform-api'])
+    );
   });
 });

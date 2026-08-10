@@ -66,6 +66,11 @@ OpenSail deployment/preview
 ## Production hardening notes
 
 - Prefer durable payment-state storage before Mainnet (this starter uses
-  in-memory records for demo idempotency only).
-- Never mark payments successful on non-200 `/complete`.
+  in-memory records for demo idempotency only — process restart loses local state).
+- Never mark payments successful because a frontend callback fired; only a
+  successful Platform `/complete` (or GET reconciliation confirming completed)
+  may record local `completed`.
+- Duplicate approve/complete callbacks that return Platform non-2xx must not
+  downgrade a prior local `approved` / `completed` record; the backend GETs
+  the payment and reconciles when possible.
 - Incomplete payments must be reconciled via Platform API — never assumed paid.

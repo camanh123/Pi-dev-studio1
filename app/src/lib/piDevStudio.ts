@@ -46,6 +46,47 @@ export const PI_SKILL_SLUGS = [
 
 export type PiSkillSlug = (typeof PI_SKILL_SLUGS)[number];
 
+/**
+ * Recommended marketplace skill slugs per Pi starter.
+ * Skills are NOT auto-assigned at project create — they require the existing
+ * OpenSail AgentSkillAssignment flow (Marketplace purchase → install on agent).
+ */
+export const PI_RECOMMENDED_SKILLS_BY_BASE: Record<PiBaseSlug, readonly PiSkillSlug[]> = {
+  [PI_WEB_STARTER_SLUG]: ['pi-sdk', 'pi-developer-portal', 'pi-browser', 'pi-compliance'],
+  [PI_AUTH_STARTER_SLUG]: [
+    'pi-auth',
+    'pi-sdk',
+    'pi-platform-api',
+    'pi-browser',
+    'pi-compliance',
+    'pi-developer-portal',
+  ],
+  [PI_PAYMENTS_STARTER_SLUG]: [
+    'pi-payments',
+    'pi-auth',
+    'pi-sdk',
+    'pi-platform-api',
+    'pi-browser',
+    'pi-developer-portal',
+    'pi-compliance',
+  ],
+};
+
+/** Skills expected when a developer asks to extend a starter (agent safety matrix). */
+export const PI_SKILLS_FOR_PROMPT: Record<
+  'add-pi-login' | 'verify-pi-user' | 'add-pi-payment',
+  readonly PiSkillSlug[]
+> = {
+  'add-pi-login': ['pi-auth', 'pi-sdk', 'pi-browser'],
+  'verify-pi-user': ['pi-auth', 'pi-platform-api'],
+  'add-pi-payment': ['pi-payments', 'pi-platform-api'],
+};
+
+export function getRecommendedPiSkillsForBase(slug: string | null | undefined): PiSkillSlug[] {
+  if (!isPiBaseSlug(slug)) return [];
+  return [...PI_RECOMMENDED_SKILLS_BY_BASE[slug]];
+}
+
 export const PI_SETUP_STORAGE_KEY = 'tesslate.pi.setupBaseSlug';
 
 export interface PiFeatureFlagState {
@@ -202,6 +243,13 @@ export const PI_WIZARD_STEPS = [
     title: 'Review Pi SDK configuration',
     owner: 'Generated app',
     detail: 'Confirm official CDN + Pi.init version "2.0" and sandbox setting in the starter.',
+  },
+  {
+    id: 'attach-pi-skills',
+    title: 'Attach recommended Pi skills',
+    owner: 'OpenSail Marketplace',
+    detail:
+      'Pi skills are not auto-assigned. Purchase each recommended skill in Marketplace, then install it on your project agent (AgentSkillAssignment) so load_skill can resolve the slug.',
   },
   {
     id: 'portal-register',
