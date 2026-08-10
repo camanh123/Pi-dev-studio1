@@ -45,15 +45,21 @@ async def load_skill_executor(params: dict[str, Any], context: dict[str, Any]) -
             suggestion="Skills must be installed on the agent or present in the project's .agents/skills/ directory",
         )
 
-    # Find matching skill (case-insensitive)
-    skill = None
-    for s in available_skills:
-        if s.name.lower() == skill_name.lower():
-            skill = s
-            break
+    # Find matching skill by display name OR marketplace slug (case-insensitive).
+    # Pi skill bodies instruct ``load_skill`` with slug keys (e.g. ``pi-sdk``)
+    # while progressive disclosure historically catalogued display names only.
+    from ....services.marketplace_sync_helpers import match_skill_catalog_entry
+
+    skill = match_skill_catalog_entry(skill_name, available_skills)
 
     if not skill:
-        available_names = [s.name for s in available_skills]
+        available_names = []
+        for s in available_skills:
+            slug = getattr(s, "slug", None)
+            if isinstance(slug, str) and slug and slug.lower() != s.name.lower():
+                available_names.append(f"{s.name} ({slug})")
+            else:
+                available_names.append(s.name)
         return error_output(
             message=f"Skill '{skill_name}' not found in available skills",
             suggestion=f"Available skills: {', '.join(available_names)}",

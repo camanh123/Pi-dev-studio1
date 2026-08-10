@@ -9,6 +9,7 @@ import { PiSetupChecklist } from '../components/pi/PiSetupChecklist';
 import { useFeatureFlag } from '../contexts/useFeatureFlag';
 import {
   PI_FEATURE_FLAGS,
+  clearPiSetupBaseSlug,
   isPiBaseVisible,
   readPiSetupBaseSlug,
   type PiBaseSlug,
@@ -131,6 +132,7 @@ export default function ProjectSetup() {
     try {
       const result = await setupApi.saveConfig(slug, config);
       toast.success('Configuration saved!');
+      clearPiSetupBaseSlug();
 
       // Navigate to builder with the primary container
       if (result.primary_container_id) {
@@ -160,8 +162,10 @@ export default function ProjectSetup() {
         primaryApp: 'workspace',
       };
       await setupApi.saveConfig(slug, defaultConfig);
+      clearPiSetupBaseSlug();
       navigate(`/project/${slug}/builder`);
     } catch {
+      clearPiSetupBaseSlug();
       navigate(`/project/${slug}/builder`);
     } finally {
       setIsSaving(false);

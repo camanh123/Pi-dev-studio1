@@ -946,6 +946,15 @@ class MarketplaceSyncWorker:
         existing = await self._existing_row(session, MarketplaceBase, source, slug)
         pricing, effective = self._resolve_pricing(item, source.trust_level)
 
+        # Git clone branch for create-project. Seeded bases (including Pi
+        # orphan branches like base/pi-web-starter) store default_branch in
+        # the version/bundle manifest; older envelopes may also expose it
+        # top-level. Dropping this field forces clone of ``main`` and breaks
+        # MarketplaceBase acquisition for non-main templates.
+        from .marketplace_sync_helpers import resolve_marketplace_base_default_branch
+
+        default_branch = resolve_marketplace_base_default_branch(item)
+
         fields: dict[str, Any] = {
             "name": item.get("name") or slug,
             "slug": slug,
@@ -963,6 +972,7 @@ class MarketplaceSyncWorker:
             "rating": float(item.get("rating") or 0.0),
             "reviews_count": int(item.get("reviews_count") or 0),
             "git_repo_url": item.get("git_repo_url"),
+            "default_branch": default_branch,
             "pricing_type": effective["pricing_type"],
             "price": effective["price_cents"],
             "stripe_price_id": effective["stripe_price_id"],
