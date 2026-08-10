@@ -479,6 +479,17 @@ def test_release_hygiene_gitignore_covers_local_audit_artifacts():
     assert "bases/pi-*/frontend/dist/" in gi
 
 
+def test_publish_scripts_exclude_local_lockfiles():
+    for name in (
+        "publish-pi-web-starter-base.sh",
+        "publish-pi-auth-starter-base.sh",
+        "publish-pi-payments-starter-base.sh",
+    ):
+        text = (_REPO_ROOT / "scripts" / name).read_text(encoding="utf-8")
+        assert "package-lock.json" in text
+        assert "--exclude package-lock.json" in text or "-name package-lock.json" in text
+
+
 def test_git_does_not_track_workspace_data_or_starter_lockfiles():
     tracked = _git("ls-files").stdout.splitlines()
     for path in tracked:

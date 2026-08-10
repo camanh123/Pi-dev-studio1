@@ -18,11 +18,14 @@ trap cleanup EXIT
 
 if command -v rsync >/dev/null 2>&1; then
   rsync -a --exclude node_modules --exclude dist --exclude .git --exclude __pycache__ \
+    --exclude package-lock.json --exclude yarn.lock --exclude pnpm-lock.yaml \
     "${SRC}/" "${TMP}/"
 else
   cp -a "${SRC}/." "${TMP}/"
   find "${TMP}" \( -name node_modules -o -name dist -o -name .git -o -name __pycache__ \) \
     -type d -prune -exec rm -rf {} + 2>/dev/null || true
+  find "${TMP}" \( -name package-lock.json -o -name yarn.lock -o -name pnpm-lock.yaml \) \
+    -type f -delete 2>/dev/null || true
 fi
 
 git -C "${TMP}" init -b "${BRANCH}"
