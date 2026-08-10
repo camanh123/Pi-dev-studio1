@@ -35,6 +35,12 @@ import { useTheme } from '../theme/ThemeContext';
 import { SEO, generateMarketplaceStructuredData } from '../components/SEO';
 import { useMarketplaceAuth } from '../contexts/MarketplaceAuthContext';
 import { useAuth } from '../contexts/AuthContext';
+import { useFeatureFlag } from '../contexts/useFeatureFlag';
+import {
+  PI_FEATURE_FLAGS,
+  isPiBaseVisible,
+  isPiSkillVisible,
+} from '../lib/piDevStudio';
 import { ShieldCheck } from '@phosphor-icons/react';
 
 type ItemType = 'app' | 'agent' | 'base' | 'theme' | 'skill' | 'mcp_server';
@@ -169,6 +175,9 @@ export default function Marketplace() {
   const { user } = useAuth();
   const isSuperuser = Boolean(user?.is_superuser);
   const { teamSwitchKey } = useTeam();
+  const piTemplatesEnabled = useFeatureFlag(PI_FEATURE_FLAGS.templates);
+  const piPaymentsTemplateEnabled = useFeatureFlag(PI_FEATURE_FLAGS.paymentsTemplate);
+  const piSkillsEnabled = useFeatureFlag(PI_FEATURE_FLAGS.skills);
   const [showSourceDropdown, setShowSourceDropdown] = useState(false);
 
   // Refs
@@ -434,6 +443,19 @@ export default function Marketplace() {
           }));
         }
 
+        if (itemType === 'base') {
+          data = data.filter((item) =>
+            isPiBaseVisible(String(item.slug || ''), {
+              pi_templates: piTemplatesEnabled,
+              pi_payments_template: piPaymentsTemplateEnabled,
+            })
+          );
+        } else if (itemType === 'skill') {
+          data = data.filter((item) =>
+            isPiSkillVisible(String(item.slug || ''), { pi_skills: piSkillsEnabled })
+          );
+        }
+
         setItems(data);
       } catch (err) {
         // Silently ignore cancelled requests (both native AbortError and Axios CanceledError)
@@ -447,7 +469,12 @@ export default function Marketplace() {
         setFiltering(false);
       }
     },
-    [initialLoading]
+    [
+      initialLoading,
+      piTemplatesEnabled,
+      piPaymentsTemplateEnabled,
+      piSkillsEnabled,
+    ]
   );
 
   // Debounced search

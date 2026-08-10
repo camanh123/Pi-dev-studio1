@@ -1,0 +1,263 @@
+{
+  "schema_version": 1,
+  "description": "Phase 1 Official Pi knowledge corpus. Normative API claims must cite an entry here. Do not invent endpoints or treat community material as normative.",
+  "entries": [
+    {
+      "id": "pi-platform-docs-readme",
+      "source_url": "https://github.com/pi-apps/pi-platform-docs/blob/master/README.md",
+      "source_authority": "pi-platform-docs",
+      "document_title": "Pi Platform Docs — Frontend Javascript SDK README",
+      "topics": ["sdk", "auth", "payments"],
+      "doc_class": "normative-api",
+      "retrieved_at": "2026-08-10T11:15:12Z",
+      "status": "current",
+      "sdk_api_version": "2.0",
+      "environments": ["all"],
+      "community": false,
+      "notes": "Canonical overview of the frontend JS SDK (CDN install, Pi Browser target, not for server-side Node). Also summarizes authenticate and createPayment. Workflow details in sibling docs supersede this file where they conflict. Workflow guidance in the same README (Developer Portal pointer) is explanatory, not an API schema.",
+      "documented_surfaces": [
+        "https://sdk.minepi.com/pi-sdk.js",
+        "Pi.init({ version: \"2.0\" })",
+        "Pi.authenticate",
+        "Pi.createPayment",
+        "develop.pi Developer Portal"
+      ]
+    },
+    {
+      "id": "pi-sdk-reference",
+      "source_url": "https://github.com/pi-apps/pi-platform-docs/blob/master/SDK_reference.md",
+      "source_authority": "pi-platform-docs",
+      "document_title": "Pi Client SDK Reference",
+      "topics": ["sdk", "auth", "payments", "browser"],
+      "doc_class": "normative-api",
+      "retrieved_at": "2026-08-10T11:15:12Z",
+      "status": "current",
+      "sdk_api_version": "2.0",
+      "environments": ["sandbox", "testnet", "mainnet"],
+      "community": false,
+      "notes": "Normative client SDK reference: init version/sandbox, authenticate scopes, createPayment callbacks, PaymentDTO / AuthResult / AppNetwork types, native features, share dialog, Ads module, openUrlInSystemBrowser. Warns that client user info must not be trusted alone — verify via Platform API /me.",
+      "documented_surfaces": [
+        "Pi.init",
+        "Pi.init.sandbox",
+        "Pi.authenticate",
+        "scopes:username",
+        "scopes:payments",
+        "scopes:wallet_address",
+        "Pi.createPayment",
+        "onReadyForServerApproval",
+        "onReadyForServerCompletion",
+        "onCancel",
+        "onError",
+        "onIncompletePaymentFound",
+        "PaymentDTO",
+        "AuthResult",
+        "AppNetwork",
+        "Pi.nativeFeaturesList",
+        "Pi.openShareDialog",
+        "Pi.Ads.showAd",
+        "Pi.Ads.isAdReady",
+        "Pi.Ads.requestAd",
+        "Pi.openUrlInSystemBrowser",
+        "https://sandbox.minepi.com"
+      ]
+    },
+    {
+      "id": "pi-sdk-js-artifact",
+      "source_url": "https://sdk.minepi.com/pi-sdk.js",
+      "source_authority": "sdk.minepi.com",
+      "document_title": "Official Pi Frontend SDK JavaScript Artifact",
+      "topics": ["sdk"],
+      "doc_class": "normative-api",
+      "retrieved_at": "2026-08-10T11:15:12Z",
+      "status": "current",
+      "sdk_api_version": "2.0",
+      "environments": ["all"],
+      "community": false,
+      "notes": "Official CDN artifact referenced by platform-docs. Presence of this file does not authorize reverse-engineering undocumented APIs; only document symbols that appear in pi-platform-docs.",
+      "documented_surfaces": [
+        "https://sdk.minepi.com/pi-sdk.js"
+      ]
+    },
+    {
+      "id": "pi-platform-api",
+      "source_url": "https://github.com/pi-apps/pi-platform-docs/blob/master/platform_API.md",
+      "source_authority": "pi-platform-docs",
+      "document_title": "Pi Platform API",
+      "topics": ["platform-api", "auth", "payments"],
+      "doc_class": "normative-api",
+      "retrieved_at": "2026-08-10T11:15:12Z",
+      "status": "current",
+      "sdk_api_version": "v2",
+      "environments": ["all"],
+      "community": false,
+      "notes": "Normative HTTP Platform API v2. Authorization: Bearer <user access token> for user resources; Authorization: Key <Server API Key> for server payment operations. Server API Key must never be sent to clients. documented_surfaces lists only routes present in this source.",
+      "documented_surfaces": [
+        "https://api.minepi.com/v2",
+        "GET /me",
+        "GET /payments/{payment_id}",
+        "POST /payments/{payment_id}/approve",
+        "POST /payments/{payment_id}/complete",
+        "POST /payments/{payment_id}/cancel",
+        "GET /payments/incomplete_server_payments",
+        "GET /ads_network/status/:adId",
+        "UserDTO",
+        "PaymentDTO",
+        "RewardedAdStatusDTO"
+      ]
+    },
+    {
+      "id": "pi-payments-u2a",
+      "source_url": "https://github.com/pi-apps/pi-platform-docs/blob/master/payments.md",
+      "source_authority": "pi-platform-docs",
+      "document_title": "Pi Payments — U2A Flow",
+      "topics": ["payments"],
+      "doc_class": "normative-api",
+      "retrieved_at": "2026-08-10T11:15:12Z",
+      "status": "current",
+      "sdk_api_version": "v2",
+      "environments": ["all"],
+      "community": false,
+      "notes": "Normative User-To-App payment lifecycle: createPayment → onReadyForServerApproval → server /approve → user blockchain submit → onReadyForServerCompletion → server /complete with txid. Explicitly warns not to mark payments complete on non-200 /complete responses.",
+      "documented_surfaces": [
+        "Pi.createPayment",
+        "onReadyForServerApproval",
+        "onReadyForServerCompletion",
+        "POST /payments/{payment_id}/approve",
+        "POST /payments/{payment_id}/complete"
+      ]
+    },
+    {
+      "id": "pi-payments-advanced",
+      "source_url": "https://github.com/pi-apps/pi-platform-docs/blob/master/payments_advanced.md",
+      "source_authority": "pi-platform-docs",
+      "document_title": "Pi Payments Advanced — A2U and Backend SDKs",
+      "topics": ["payments", "platform-api"],
+      "doc_class": "normative-api",
+      "retrieved_at": "2026-08-10T11:15:12Z",
+      "status": "current",
+      "sdk_api_version": "v2",
+      "environments": ["testnet"],
+      "community": false,
+      "notes": "Documents A2U payments and backend SDK status. Explicitly states A2U is currently available only on the Testnet. Ruby pi-ruby is officially supported by Pi Core Team; Node.js pi-nodejs marked Coming soon; Python/PHP listed as TBD / Community-maintained. Do not infer Mainnet A2U support or an official Core-Team Python SDK.",
+      "documented_surfaces": [
+        "A2U payments",
+        "POST /payments",
+        "pi-ruby official",
+        "pi-nodejs coming soon",
+        "Python TBD community-maintained"
+      ]
+    },
+    {
+      "id": "pi-api-host-v2",
+      "source_url": "https://api.minepi.com/v2",
+      "source_authority": "api.minepi.com",
+      "document_title": "Pi Platform API Base Path (v2)",
+      "topics": ["platform-api"],
+      "doc_class": "normative-api",
+      "retrieved_at": "2026-08-10T11:15:12Z",
+      "status": "current",
+      "sdk_api_version": "v2",
+      "environments": ["all"],
+      "community": false,
+      "notes": "Official Platform API base path as documented in platform_API.md. This entry records the allowlisted host/base only; route semantics live under pi-platform-api.",
+      "documented_surfaces": [
+        "https://api.minepi.com/v2"
+      ]
+    },
+    {
+      "id": "pi-developer-portal-workflow",
+      "source_url": "https://minepi.com/developers/pi-hackathon/",
+      "source_authority": "minepi.com",
+      "document_title": "Pi Developer Portal Workflow (Hackathon Instructions)",
+      "topics": ["portal", "compliance"],
+      "doc_class": "workflow-guidance",
+      "retrieved_at": "2026-08-10T11:15:12Z",
+      "status": "current",
+      "sdk_api_version": null,
+      "environments": ["testnet", "mainnet"],
+      "community": false,
+      "notes": "Workflow guidance for Developer Portal accessed via develop.pinet.com / develop.pi inside Pi Browser: register app, select Testnet/Mainnet, configure app URL, domain ownership validation-key.txt, pair Testnet/Mainnet apps. Not a public portal API specification. Also records app guidelines: Pi SDK-only auth/payments when used; never request passphrases.",
+      "documented_surfaces": [
+        "develop.pinet.com",
+        "develop.pi",
+        "validation-key.txt",
+        "Paired Testnet App",
+        "App Network Testnet/Mainnet"
+      ]
+    },
+    {
+      "id": "pi-students-developer-onboarding",
+      "source_url": "https://minepi.com/students/",
+      "source_authority": "minepi.com",
+      "document_title": "Pi Students / Developer Onboarding",
+      "topics": ["portal", "browser"],
+      "doc_class": "workflow-guidance",
+      "retrieved_at": "2026-08-10T11:15:12Z",
+      "status": "current",
+      "sdk_api_version": null,
+      "environments": ["testnet"],
+      "community": false,
+      "notes": "Official onboarding: Pi account, Pi Browser, Develop.pi hub, register project in Developer Portal, verify email, agree to developer terms, select Testnet. Workflow only.",
+      "documented_surfaces": [
+        "Develop.pi",
+        "Register App",
+        "Testnet app network"
+      ]
+    },
+    {
+      "id": "pi-developers-landing",
+      "source_url": "https://minepi.com/developers/",
+      "source_authority": "minepi.com",
+      "document_title": "Pi Apps Platform For Developers",
+      "topics": ["browser", "portal"],
+      "doc_class": "workflow-guidance",
+      "retrieved_at": "2026-08-10T11:15:12Z",
+      "status": "current",
+      "sdk_api_version": null,
+      "environments": ["all"],
+      "community": false,
+      "notes": "Official developer landing: Pi Browser as platform interface; links to SDK docs, onboarding, demo. Not an API schema.",
+      "documented_surfaces": [
+        "Pi Browser",
+        "demo.pi"
+      ]
+    },
+    {
+      "id": "pi-demo-app",
+      "source_url": "https://github.com/pi-apps/demo",
+      "source_authority": "pi-platform-docs",
+      "document_title": "Official Pi Demo App Repository",
+      "topics": ["sdk", "auth", "payments", "browser"],
+      "doc_class": "workflow-guidance",
+      "retrieved_at": "2026-08-10T11:15:12Z",
+      "status": "current",
+      "sdk_api_version": "2.0",
+      "environments": ["sandbox", "testnet"],
+      "community": false,
+      "notes": "Official demo (frontend React/Vite + Express backend) linked from pi-platform-docs. Use as implementation example only; it must not override normative platform documentation. Authority classified under pi-platform-docs because the demo is the officially cited companion to that documentation set (pi-apps org).",
+      "documented_surfaces": [
+        "demo frontend SDK usage",
+        "demo backend Platform API usage",
+        "sandbox development notes"
+      ]
+    },
+    {
+      "id": "pi-app-studio-product",
+      "source_url": "https://minepi.com/blog/app-studio-code/",
+      "source_authority": "minepi.com",
+      "document_title": "Pi App Studio Product Announcement — Code Download/Upload",
+      "topics": ["portal"],
+      "doc_class": "product-announcement",
+      "retrieved_at": "2026-08-10T11:15:12Z",
+      "status": "current",
+      "sdk_api_version": null,
+      "environments": ["all"],
+      "community": false,
+      "notes": "BOUNDARY: No public App Studio create/deploy/publish API has been confirmed. This entry records the product announcement only. Do not generate App Studio automation APIs from this source. App Studio is accessible in Pi Browser / Pi Desktop per the announcement.",
+      "documented_surfaces": [
+        "App Studio code download/upload (product UI)",
+        "NO confirmed public App Studio API"
+      ]
+    }
+  ]
+}

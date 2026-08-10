@@ -1,0 +1,34 @@
+{
+  "apps": {
+    "frontend": {
+      "directory": "frontend",
+      "port": 5173,
+      "start": "npm install && npm run dev -- --host 0.0.0.0",
+      "env": {
+        "VITE_PI_SDK_SANDBOX": "true"
+      },
+      "build": "npm run build",
+      "output": "dist",
+      "framework": "vite",
+      "x": 330.0,
+      "y": 0.0
+    },
+    "backend": {
+      "directory": "backend",
+      "port": 8001,
+      "start": "pip install -r requirements.txt && uvicorn main:app --host 0.0.0.0 --port 8001 --reload",
+      "env": {},
+      "framework": "fastapi",
+      "x": 0.0,
+      "y": 0.0
+    }
+  },
+  "infrastructure": {},
+  "primaryApp": "frontend",
+  "connections": [
+    {
+      "from": "backend",
+      "to": "frontend"
+    }
+  ]
+}

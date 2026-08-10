@@ -15,6 +15,12 @@ import toast from 'react-hot-toast';
 import { isCanceledError } from '../lib/utils';
 import { SEO, generateBreadcrumbStructuredData } from '../components/SEO';
 import { useMarketplaceAuth } from '../contexts/MarketplaceAuthContext';
+import { useFeatureFlag } from '../contexts/useFeatureFlag';
+import {
+  PI_FEATURE_FLAGS,
+  isPiBaseVisible,
+  isPiSkillVisible,
+} from '../lib/piDevStudio';
 
 type ItemType = 'agent' | 'base' | 'theme' | 'skill' | 'mcp_server';
 type SortOption =
@@ -61,6 +67,9 @@ export default function MarketplaceBrowse() {
   const [searchParams, setSearchParams] = useSearchParams();
   const { isAuthenticated } = useMarketplaceAuth();
   const { teamSwitchKey } = useTeam();
+  const piTemplatesEnabled = useFeatureFlag(PI_FEATURE_FLAGS.templates);
+  const piPaymentsTemplateEnabled = useFeatureFlag(PI_FEATURE_FLAGS.paymentsTemplate);
+  const piSkillsEnabled = useFeatureFlag(PI_FEATURE_FLAGS.skills);
 
   // Validate item type
   const itemType: ItemType = [
@@ -270,6 +279,28 @@ export default function MarketplaceBrowse() {
           data = [];
         }
 
+        // Phase 6: gate Pi MarketplaceBases / skills behind existing YAML flags.
+        if (itemType === 'base') {
+          const before = data.length;
+          data = data.filter((item) =>
+            isPiBaseVisible(String(item.slug || ''), {
+              pi_templates: piTemplatesEnabled,
+              pi_payments_template: piPaymentsTemplateEnabled,
+            })
+          );
+          if (data.length !== before) {
+            resultTotal = Math.max(0, resultTotal - (before - data.length));
+          }
+        } else if (itemType === 'skill') {
+          const before = data.length;
+          data = data.filter((item) =>
+            isPiSkillVisible(String(item.slug || ''), { pi_skills: piSkillsEnabled })
+          );
+          if (data.length !== before) {
+            resultTotal = Math.max(0, resultTotal - (before - data.length));
+          }
+        }
+
         setItems(data);
         setTotalCount(resultTotal);
         setTotalPages(resultTotalPages);
@@ -285,7 +316,13 @@ export default function MarketplaceBrowse() {
         setFiltering(false);
       }
     },
-    [itemType, initialLoading]
+    [
+      itemType,
+      initialLoading,
+      piTemplatesEnabled,
+      piPaymentsTemplateEnabled,
+      piSkillsEnabled,
+    ]
   );
 
   // Debounced search

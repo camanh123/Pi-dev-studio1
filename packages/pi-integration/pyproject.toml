@@ -1,0 +1,30 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "pi-integration"
+version = "0.1.0"
+description = "Source-verified Pi Network knowledge corpus and provenance catalog for Pi Dev Studio (Phase 1)."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "Apache-2.0" }
+authors = [{ name = "Tesslate" }]
+dependencies = [
+  "pydantic>=2.5",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.0",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/pi_integration"]
+
+[tool.hatch.build.targets.wheel.force-include]
+"src/pi_integration/knowledge/catalog.json" = "pi_integration/knowledge/catalog.json"
+"src/pi_integration/knowledge/unsupported_claims.json" = "pi_integration/knowledge/unsupported_claims.json"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

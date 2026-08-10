@@ -1,0 +1,114 @@
+{
+  "schema_version": 1,
+  "description": "Claims that Phase 2+ Pi skills must NOT assume. UNKNOWN means not established by official sources — do not treat as false unless an official source explicitly refutes it. UNSUPPORTED means the assumption contradicts verified official documentation or is explicitly out of MVP scope per Phase 0.4/0.5.",
+  "claims": [
+    {
+      "id": "pi-auth-is-oauth2",
+      "claim": "Pi authentication is an OAuth2 authorization-code / redirect identity provider comparable to Google OAuth.",
+      "status": "unsupported",
+      "reason": "Official docs specify Pi.authenticate(scopes, onIncompletePaymentFound) in the frontend SDK and server verification via GET /v2/me — not an OAuth2 redirect IdP flow."
+    },
+    {
+      "id": "pi-auth-is-opensail-oauth-provider",
+      "claim": "Pi identity can be wired as a drop-in OpenSail Google/GitHub-style OAuth provider for Studio login in MVP.",
+      "status": "not-confirmed",
+      "reason": "Phase 0.5 freezes Studio-native Pi login as a non-goal. Official Pi auth targets Pi apps in Pi Browser / sandbox, not OpenSail platform auth."
+    },
+    {
+      "id": "pi-payment-is-stripe",
+      "claim": "Pi payments are equivalent to Stripe Checkout / subscriptions.",
+      "status": "unsupported",
+      "reason": "Official U2A flow is createPayment → server approve → on-chain user submit → server complete with txid. Not a Stripe-like provider."
+    },
+    {
+      "id": "pi-payment-has-stripe-webhooks",
+      "claim": "Pi payments deliver Stripe-style signed webhooks for fulfillment.",
+      "status": "unknown",
+      "reason": "Reviewed official payment docs describe client SDK callbacks plus server Platform API approve/complete. No Stripe-equivalent webhook protocol was verified."
+    },
+    {
+      "id": "pi-payment-supports-refunds",
+      "claim": "Official Pi Platform API supports payment refunds.",
+      "status": "unknown",
+      "reason": "Refund endpoints/flows were not present in the verified platform_API.md / payments.md surfaces."
+    },
+    {
+      "id": "pi-payment-supports-recurring-billing",
+      "claim": "Official Pi Platform API supports recurring / subscription billing.",
+      "status": "unknown",
+      "reason": "Recurring billing was not documented in the verified payment sources."
+    },
+    {
+      "id": "pi-app-studio-public-api",
+      "claim": "Pi App Studio exposes a public API for external tools.",
+      "status": "not-confirmed",
+      "reason": "Official App Studio material is product-announcement class. No public App Studio create/deploy/publish API has been confirmed."
+    },
+    {
+      "id": "pi-app-studio-deploy-api",
+      "claim": "Pi App Studio provides a documented deploy API for automation.",
+      "status": "not-confirmed",
+      "reason": "No confirmed public deploy API; deployment for custom apps is self-host URL + Developer Portal configuration."
+    },
+    {
+      "id": "pi-app-studio-publish-api",
+      "claim": "Pi App Studio provides a documented publish API for automation.",
+      "status": "not-confirmed",
+      "reason": "No confirmed public publish API in verified sources."
+    },
+    {
+      "id": "pi-wallet-balance-api",
+      "claim": "There is an official public Pi wallet balance API for third-party apps beyond documented payment scopes/flows.",
+      "status": "unknown",
+      "reason": "Verified docs document wallet_address scope and payment DTOs; a general balance API was not confirmed."
+    },
+    {
+      "id": "pi-wallet-history-api",
+      "claim": "There is an official public Pi wallet history API for third-party apps.",
+      "status": "unknown",
+      "reason": "Not present in the verified Platform API route list."
+    },
+    {
+      "id": "pi-wallet-custody-api",
+      "claim": "Third-party apps may take custody of user wallet passphrases or keys via an official API.",
+      "status": "unsupported",
+      "reason": "Official app guidelines state apps may never request Pioneers to enter their passphrase."
+    },
+    {
+      "id": "pi-token-refresh-protocol",
+      "claim": "Official docs define a refresh-token protocol for Pi access tokens comparable to OAuth refresh tokens.",
+      "status": "unknown",
+      "reason": "UserDTO includes credentials.valid_until; a refresh-token protocol was not documented in verified sources."
+    },
+    {
+      "id": "official-python-core-team-sdk",
+      "claim": "There is an official Pi Core Team Python backend SDK.",
+      "status": "not-confirmed",
+      "reason": "payments_advanced.md lists Python as TBD / Community-maintained. Ruby is officially supported; Node.js marked Coming soon."
+    },
+    {
+      "id": "official-npm-sdk-required",
+      "claim": "An npm package (e.g. pi-sdk-js) is the required official frontend SDK install path.",
+      "status": "unsupported",
+      "reason": "Official platform-docs specify loading https://sdk.minepi.com/pi-sdk.js into the page. Community npm wrappers are not normative install requirements."
+    },
+    {
+      "id": "a2u-available-on-mainnet",
+      "claim": "App-To-User (A2U) payments are available on Mainnet.",
+      "status": "not-confirmed",
+      "reason": "payments_advanced.md states A2U is currently available only on the Testnet. Do not infer Mainnet A2U."
+    },
+    {
+      "id": "opensail-preview-equals-pi-browser",
+      "claim": "OpenSail desktop/project preview is equivalent to production Pi Browser execution.",
+      "status": "unsupported",
+      "reason": "Official docs target Pi Browser for production; sandbox.minepi.com is the documented desktop development path. OpenSail preview must not claim full Pi Browser fidelity."
+    },
+    {
+      "id": "sandbox-flag-switches-portal-network",
+      "claim": "Setting Pi.init({ sandbox: true/false }) switches a Developer Portal app between Testnet and Mainnet.",
+      "status": "unsupported",
+      "reason": "Sandbox is an SDK/host mode; Testnet/Mainnet are Developer Portal app network registrations. These axes must not be collapsed."
+    }
+  ]
+}

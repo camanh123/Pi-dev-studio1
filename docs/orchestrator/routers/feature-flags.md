@@ -21,3 +21,6 @@ Public; the payload differs for authenticated vs. anonymous callers (authenticat
 ## Related
 
 - Config: [config.py](../../../orchestrator/app/config.py) for flag sources.
+- YAML schema: `orchestrator/feature_flags/defaults.yaml` (canonical flag list).
+- Pi Dev Studio Phase 6 flags: `pi_knowledge`, `pi_skills`, `pi_templates`,
+  `pi_payments_template` — see [pi-dev-studio-phase6.md](../../guides/pi-dev-studio-phase6.md).
