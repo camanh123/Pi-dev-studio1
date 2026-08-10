@@ -16,7 +16,7 @@ Load this doc when:
 
 | File | Purpose |
 |------|---------|
-| `feature_flags.py` | Loads feature flags from YAML in `orchestrator/feature_flags/` with per-environment overrides. Read path: `is_enabled(flag, user=None, team=None)`. |
+| `feature_flags.py` | Loads feature flags from YAML in `orchestrator/feature_flags/` with per-environment overrides. Read path: `get_feature_flags().enabled("flag")`. Pi Phase 6 public flags: `pi_knowledge`, `pi_skills`, `pi_templates`, `pi_payments_template` (defaults OFF). |
 
 ### Task status
 

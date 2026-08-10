@@ -47,3 +47,21 @@ out of scope.
 
 All Pi bases share clone URL `https://github.com/camanh123/Pi-dev-studio1.git`
 and keep the existing MarketplaceBase git-acquisition path.
+
+## Phase 6 — discovery / wizard UX
+
+OpenSail surfaces these bases in create-flow and marketplace when YAML feature
+flags are enabled (`pi_templates`, `pi_payments_template`). See
+[docs/guides/pi-dev-studio-phase6.md](../docs/guides/pi-dev-studio-phase6.md).
+
+Boundaries remain:
+
+```text
+Pi identity ≠ OpenSail identity
+Pi payments ≠ OpenSail billing
+sandbox ≠ Portal network
+OpenSail deployment ≠ Pi network
+```
+
+Developer Portal registration, domain validation, sandbox authorization, and
+Mainnet transition remain manual. No App Studio automation.

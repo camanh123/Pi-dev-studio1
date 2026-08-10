@@ -59,6 +59,12 @@ Phase 5 MarketplaceBase `pi-payments-starter` (`bases/pi-payments-starter/`)
 adds generated-app U2A payments (`Pi.createPayment` + `/approve` + `/complete`)
 from this catalog. It does not replace OpenSail Stripe / Team credits billing.
 
+Phase 6 adds OpenSail feature-flag gated discovery + project wizard/checklist UX
+(`pi_knowledge`, `pi_skills`, `pi_templates`, `pi_payments_template` in
+`orchestrator/feature_flags/`). This package remains the provenance authority;
+Phase 6 does not invent Portal/App Studio APIs. See
+`docs/guides/pi-dev-studio-phase6.md`.
+
 ## Usage
 
 ```python
