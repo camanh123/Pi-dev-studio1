@@ -8,6 +8,30 @@ Phase 9 hardens the Phase 8 MVP without expanding Pi API scope.
 PHASE 9 — PASS WITH KNOWN LIMITATIONS
 ```
 
+## Safety gate
+
+```text
+Pi Server API Key: PASS
+Pi access token: PASS
+Frontend secret exposure: PASS
+Pi → OpenSail auth isolation: PASS
+Pi → Stripe isolation: PASS
+Payment completion validation: PASS
+Undocumented Pi API: PASS
+Agent credential exposure: PASS
+Clean-room starter reproducibility: PASS
+Pi skill provenance: PASS
+Create-project E2E: PASS
+```
+
+## Defects found & fixed
+
+| ID | Severity | Observed | Fix | Regression |
+|----|----------|----------|-----|------------|
+| P9-01 | P1 | Duplicate Platform approve/complete 4xx could overwrite local `approved`/`completed` with `failed` | Reconcile via GET + never let `failed` downgrade protected statuses | `test_pi_payments_state_safety.py` |
+| P9-02 | P2 | Pi skills not discoverable as assignment guidance in setup UX | Checklist + wizard step for recommended slugs / AgentSkillAssignment | checklist + `piDevStudio` tests |
+| P9-03 | P3 | Local audit `package-lock.json` / `workspace-data-*` risk contaminating release/orphan publish | `.gitignore` + publish script excludes | Phase 9 hygiene tests |
+
 ## Developer workflow validated
 
 ```text
