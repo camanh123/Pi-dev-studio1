@@ -65,6 +65,9 @@ Phase 6 adds OpenSail feature-flag gated discovery + project wizard/checklist UX
 Phase 6 does not invent Portal/App Studio APIs. See
 `docs/guides/pi-dev-studio-phase6.md`.
 
+Phase 7–8 harden create-project branch sync / skill slug loading and document
+the production release gate (`docs/guides/pi-dev-studio-phase8-release.md`).
+
 ## Usage
 
 ```python
