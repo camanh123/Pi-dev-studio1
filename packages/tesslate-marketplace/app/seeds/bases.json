@@ -223,5 +223,52 @@
     "is_active": true,
     "kind": "base",
     "is_published": true
+  },
+  {
+    "name": "Pi Auth Starter",
+    "slug": "pi-auth-starter",
+    "description": "Pi-compatible web starter with official SDK init plus generated-app Pi authentication (Pi.authenticate + backend GET /v2/me). Not OpenSail login. Payments intentionally excluded.",
+    "long_description": "Extends Pi Web Starter with Pi.authenticate([\"username\"], …) and generated-app backend verification against https://api.minepi.com/v2/me using Bearer user tokens. Establishes app-local verified-user state only — never wires into OpenSail OAuth/JWT. Zero Server API Key and zero payment routes. Primary skills: pi-auth, pi-sdk, pi-platform-api, pi-browser.",
+    "git_repo_url": "https://github.com/camanh123/Pi-dev-studio1.git",
+    "default_branch": "base/pi-auth-starter",
+    "category": "fullstack",
+    "icon": "Pi",
+    "tags": [
+      "pi",
+      "auth",
+      "sdk",
+      "vite",
+      "react",
+      "fastapi",
+      "sandbox",
+      "browser",
+      "starter"
+    ],
+    "pricing_type": "free",
+    "price": 0,
+    "downloads": 0,
+    "rating": 5.0,
+    "reviews_count": 0,
+    "features": [
+      "Official Pi SDK CDN",
+      "Pi.init version 2.0",
+      "Pi.authenticate username scope",
+      "Backend /v2/me verification",
+      "Generated-app local identity",
+      "Payments deferred"
+    ],
+    "tech_stack": [
+      "Pi SDK 2.0",
+      "Vite",
+      "React",
+      "TypeScript",
+      "FastAPI",
+      "Python",
+      "httpx"
+    ],
+    "is_featured": true,
+    "is_active": true,
+    "kind": "base",
+    "is_published": true
   }
 ]
