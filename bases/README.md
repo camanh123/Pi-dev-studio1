@@ -65,3 +65,6 @@ OpenSail deployment ≠ Pi network
 
 Developer Portal registration, domain validation, sandbox authorization, and
 Mainnet transition remain manual. No App Studio automation.
+
+Release readiness for Phases 1–7 is documented in
+[docs/guides/pi-dev-studio-phase8-release.md](../docs/guides/pi-dev-studio-phase8-release.md).
