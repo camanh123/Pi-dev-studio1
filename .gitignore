@@ -11,7 +11,10 @@ orchestrator/.tesslate/
 # broad rule above so these are tracked.
 !seeds/apps/*/.tesslate/
 !seeds/apps/*/.tesslate/**
-
+# Exception: MarketplaceBase template trees under bases/ also ship
+# .tesslate/config.json for create-project container shape.
+!bases/*/.tesslate/
+!bases/*/.tesslate/**
 # Desktop PRD scratch / planning (local-only, never committed)
 desktop-todo/
 
