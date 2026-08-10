@@ -47,6 +47,10 @@ Phase 2 Pi skills (`pi-sdk`, `pi-auth`, `pi-platform-api`, `pi-payments`,
 `pi-developer-portal`, `pi-browser`, `pi-compliance`) cite catalog entry IDs
 from this package. Do not treat skill bodies as a second provenance authority.
 
+Phase 3 MarketplaceBase `pi-web-starter` (`bases/pi-web-starter/`) consumes the
+same verified SDK facts (CDN + `Pi.init` 2.0) without embedding this package at
+runtime in generated projects.
+
 ## Usage
 
 ```python
