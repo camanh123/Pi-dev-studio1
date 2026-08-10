@@ -270,5 +270,52 @@
     "is_active": true,
     "kind": "base",
     "is_published": true
+  },
+  {
+    "name": "Pi Payments Starter",
+    "slug": "pi-payments-starter",
+    "description": "Pi-compatible starter with official SDK auth plus generated-app U2A payments (Pi.createPayment + server approve/complete). Not OpenSail Stripe billing. Testnet-first.",
+    "long_description": "Extends Pi Auth Starter with documented User-To-App payments: Pi.createPayment callbacks, backend POST /v2/payments/{id}/approve and /complete with Key auth, incomplete-payment handling, and Testnet-first guidance. Server API Key is backend-only. No refunds, recurring, webhooks, A2U, wallet APIs, or OpenSail billing replacement. Skills: pi-payments, pi-auth, pi-sdk, pi-platform-api.",
+    "git_repo_url": "https://github.com/camanh123/Pi-dev-studio1.git",
+    "default_branch": "base/pi-payments-starter",
+    "category": "fullstack",
+    "icon": "Pi",
+    "tags": [
+      "pi",
+      "payments",
+      "u2a",
+      "auth",
+      "sdk",
+      "vite",
+      "react",
+      "fastapi",
+      "starter"
+    ],
+    "pricing_type": "free",
+    "price": 0,
+    "downloads": 0,
+    "rating": 5.0,
+    "reviews_count": 0,
+    "features": [
+      "Official Pi SDK CDN",
+      "Pi.authenticate + /v2/me",
+      "Pi.createPayment U2A",
+      "Server approve/complete",
+      "Incomplete payment helper",
+      "Testnet-first docs"
+    ],
+    "tech_stack": [
+      "Pi SDK 2.0",
+      "Vite",
+      "React",
+      "TypeScript",
+      "FastAPI",
+      "Python",
+      "httpx"
+    ],
+    "is_featured": true,
+    "is_active": true,
+    "kind": "base",
+    "is_published": true
   }
 ]
