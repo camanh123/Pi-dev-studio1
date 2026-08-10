@@ -51,6 +51,10 @@ Phase 3 MarketplaceBase `pi-web-starter` (`bases/pi-web-starter/`) consumes the
 same verified SDK facts (CDN + `Pi.init` 2.0) without embedding this package at
 runtime in generated projects.
 
+Phase 4 MarketplaceBase `pi-auth-starter` (`bases/pi-auth-starter/`) adds
+generated-app `Pi.authenticate` + backend `GET /v2/me` verification from this
+catalog. It does not modify OpenSail platform authentication.
+
 ## Usage
 
 ```python

@@ -13,12 +13,25 @@ create-project via `git clone` of `git_repo_url`.
 | Clone URL | `https://github.com/camanh123/Pi-dev-studio1.git` |
 | Clone branch | `base/pi-web-starter` |
 
-Publish/update the orphan clone branch:
-
 ```bash
 ./scripts/publish-pi-web-starter-base.sh
 ```
 
-This keeps the existing MarketplaceBase git-acquisition path without inventing
-a second template system. A future standalone TesslateAI repo name would be
-`Studio-Pi-Web-Starter-Base`.
+## Pi Auth Starter
+
+| Field | Value |
+|-------|-------|
+| Slug | `pi-auth-starter` |
+| In-repo source | `bases/pi-auth-starter/` |
+| Clone URL | `https://github.com/camanh123/Pi-dev-studio1.git` |
+| Clone branch | `base/pi-auth-starter` |
+
+```bash
+./scripts/publish-pi-auth-starter-base.sh
+```
+
+Extends Web Starter with generated-app `Pi.authenticate` + backend
+`GET /v2/me` verification. Not OpenSail authentication. Payments deferred.
+
+Both bases keep the existing MarketplaceBase git-acquisition path without
+inventing a second template system.
