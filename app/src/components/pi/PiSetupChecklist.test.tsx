@@ -10,11 +10,11 @@ describe('PiSetupChecklist', () => {
 
   it('states identity boundary for auth starter', () => {
     render(<PiSetupChecklist baseSlug="pi-auth-starter" />);
-    expect(screen.getByTestId('pi-identity-boundary')).toHaveTextContent(
-      /OpenSail account ≠ Pi Pioneer identity/
-    );
+    const boundary = screen.getByTestId('pi-identity-boundary');
+    expect(boundary).toHaveTextContent(/OpenSail account ≠ Pi Pioneer identity/);
+    expect(boundary).toHaveTextContent(/Do not use Pi as OpenSail login/);
     expect(screen.queryByText(/Sign in to OpenSail with Pi/i)).toBeNull();
-    expect(screen.queryByText(/Use Pi as OpenSail login/i)).toBeNull();
+    expect(screen.queryByRole('button', { name: /use pi as opensail login/i })).toBeNull();
   });
 
   it('shows payment safety and mainnet human-review warning for payments starter', () => {
@@ -28,9 +28,9 @@ describe('PiSetupChecklist', () => {
 
   it('lists distinct environment concepts', () => {
     render(<PiSetupChecklist baseSlug="pi-web-starter" />);
-    expect(screen.getByText(/OpenSail preview \/ deployment mode/i)).toBeInTheDocument();
-    expect(screen.getByText(/Pi SDK sandbox flag/i)).toBeInTheDocument();
-    expect(screen.getByText(/Developer Portal app network/i)).toBeInTheDocument();
-    expect(screen.getByText(/Payment DTO network/i)).toBeInTheDocument();
+    expect(screen.getByText('OpenSail preview / deployment mode')).toBeInTheDocument();
+    expect(screen.getByText('Pi SDK sandbox flag')).toBeInTheDocument();
+    expect(screen.getByText('Developer Portal app network')).toBeInTheDocument();
+    expect(screen.getByText('Payment DTO network')).toBeInTheDocument();
   });
 });
