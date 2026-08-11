@@ -150,7 +150,27 @@ def _git(*args: str) -> subprocess.CompletedProcess[str]:
     )
 
 
+# Environments that must remain Stage 0 (no Pi flags ON) after Phase 14.
+_STAGE0_ENV_FILES = frozenset(
+    {
+        "production.yaml",
+        "docker.yaml",
+        "minikube.yaml",
+        "desktop.yaml",
+    }
+)
+
+# Intended Phase 14 beta Stage 3 contract (payments OFF).
+BETA_STAGE3_FLAGS = {
+    "pi_knowledge": True,
+    "pi_skills": True,
+    "pi_templates": True,
+    "pi_payments_template": False,
+}
+
+
 def check_feature_flag_safe_defaults() -> HealthCheckResult:
+    """Defaults + non-beta envs stay Stage 0; beta may hold Stage 3 only."""
     import yaml
 
     raw = yaml.safe_load((_FLAGS / "defaults.yaml").read_text(encoding="utf-8"))
@@ -161,23 +181,76 @@ def check_feature_flag_safe_defaults() -> HealthCheckResult:
                 False,
                 f"{flag} is not false in defaults.yaml",
             )
-    # Env overlays must not silently enable Pi flags.
     for env_file in _FLAGS.glob("*.yaml"):
         if env_file.name == "defaults.yaml":
             continue
         overrides = yaml.safe_load(env_file.read_text(encoding="utf-8")) or {}
-        for flag in PI_FLAGS:
-            if overrides.get(flag) is True:
+        if env_file.name == "beta.yaml":
+            # Beta Stage 3 is operator-approved (Phase 14). Payments must stay OFF.
+            if overrides.get("pi_payments_template") is True:
                 return HealthCheckResult(
                     "feature_flag_defaults",
                     False,
-                    f"{env_file.name} enables {flag}=true (forbidden without operator approval)",
+                    "beta.yaml must keep pi_payments_template=false (Stage 4 OFF)",
                 )
+            continue
+        if env_file.name in _STAGE0_ENV_FILES or env_file.name.endswith(".yaml"):
+            for flag in PI_FLAGS:
+                if overrides.get(flag) is True:
+                    return HealthCheckResult(
+                        "feature_flag_defaults",
+                        False,
+                        f"{env_file.name} enables {flag}=true "
+                        "(only beta.yaml may enable Stage 3 Pi flags)",
+                    )
     return HealthCheckResult(
         "feature_flag_defaults",
         True,
-        "All Pi flags default OFF; no env overlay enables them",
+        "defaults + non-beta envs Stage 0; beta may enable Stage 3 (payments OFF)",
     )
+
+
+def validate_beta_stage3_activation() -> HealthCheckResult:
+    """Phase 14: beta resolves to Stage 3; payments remain OFF."""
+    try:
+        resolved = {flag: resolve_flags_for_env("beta")[flag] for flag in PI_FLAGS}
+    except Exception as exc:  # noqa: BLE001 — surface as health detail
+        return HealthCheckResult("beta_stage3_activation", False, str(exc))
+    if resolved != BETA_STAGE3_FLAGS:
+        return HealthCheckResult(
+            "beta_stage3_activation",
+            False,
+            f"beta resolved {resolved}, expected {BETA_STAGE3_FLAGS}",
+        )
+    return HealthCheckResult(
+        "beta_stage3_activation",
+        True,
+        "beta Stage 3 ON (knowledge/skills/templates); payments OFF",
+    )
+
+
+def validate_production_remains_stage0() -> HealthCheckResult:
+    """Production must remain Stage 0 until explicit human approval."""
+    resolved = {flag: resolve_flags_for_env("production")[flag] for flag in PI_FLAGS}
+    if any(resolved.values()):
+        return HealthCheckResult(
+            "production_stage0",
+            False,
+            f"production must remain Stage 0, got {resolved}",
+        )
+    return HealthCheckResult(
+        "production_stage0",
+        True,
+        "production Pi flags all OFF (Stage 0)",
+    )
+
+
+def simulate_beta_rollback_to_stage0() -> dict[str, bool]:
+    """In-memory rollback: Pi keys removed from beta → defaults Stage 0.
+
+    Does not mutate beta.yaml. LIVE BETA ROLLBACK requires operator redeploy.
+    """
+    return {flag: False for flag in PI_FLAGS}
 
 
 def check_marketplace_seed_availability() -> HealthCheckResult:
@@ -340,8 +413,9 @@ def run_pi_ops_health(
     include_git_orphans: bool = True,
     env: str = "production",
     include_stage3_overlay_check: bool = True,
+    include_beta_activation_check: bool = True,
 ) -> PiOpsHealthReport:
-    """Run the Phase 12/13 operational health suite."""
+    """Run the Phase 12–14 operational health suite."""
     import yaml
 
     raw = yaml.safe_load((_FLAGS / "defaults.yaml").read_text(encoding="utf-8"))
@@ -355,7 +429,10 @@ def run_pi_ops_health(
         check_starter_registration(),
         check_skill_registration(),
         check_knowledge_catalog_integrity(),
+        validate_production_remains_stage0(),
     ]
+    if include_beta_activation_check:
+        checks.append(validate_beta_stage3_activation())
     if include_git_orphans:
         checks.append(check_orphan_branch_resolution())
     if include_stage3_overlay_check:
@@ -385,6 +462,11 @@ def main() -> int:
         action="store_true",
         help="Print dry-run Stage 3 overlay merge without applying it",
     )
+    parser.add_argument(
+        "--simulate-beta-rollback",
+        action="store_true",
+        help="Print in-memory beta→Stage 0 rollback (does not mutate beta.yaml)",
+    )
     args = parser.parse_args()
     report = run_pi_ops_health(env=args.env)
     payload = report.to_dict()
@@ -393,6 +475,14 @@ def main() -> int:
         payload["simulated_stage3_note"] = (
             "In-memory only. production.yaml was not modified. "
             "pi_payments_template remains false."
+        )
+    if args.simulate_beta_rollback:
+        payload["beta_resolved_before_rollback"] = {
+            flag: resolve_flags_for_env("beta")[flag] for flag in PI_FLAGS
+        }
+        payload["simulated_beta_rollback_flags"] = simulate_beta_rollback_to_stage0()
+        payload["simulated_beta_rollback_note"] = (
+            "LIVE BETA ROLLBACK — NOT EXECUTED. In-memory only; beta.yaml untouched."
         )
     print(json.dumps(payload, indent=2, sort_keys=True))
     return 0 if report.ok else 1

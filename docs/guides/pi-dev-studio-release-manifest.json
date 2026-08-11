@@ -72,6 +72,9 @@
   "feature_flags": {
     "defaults_file": "orchestrator/feature_flags/defaults.yaml",
     "production_defaults": "OFF",
+    "beta_stage3": "ON (knowledge/skills/templates); payments OFF",
+    "beta_overlay": "orchestrator/feature_flags/beta.yaml",
+    "stage3_overlay_fragment": "orchestrator/feature_flags/overlays/pi-stage3-activation.yaml",
     "public": true,
     "flags": [
       "pi_knowledge",
@@ -113,7 +116,9 @@
     "packages/tesslate-marketplace/tests/test_pi_phase11_launch_readiness.py",
     "packages/tesslate-marketplace/tests/test_pi_phase12_controlled_rollout.py",
     "packages/tesslate-marketplace/tests/test_pi_phase13_controlled_production_activation.py",
+    "packages/tesslate-marketplace/tests/test_pi_phase14_beta_activation.py",
     "scripts/pi-ops-healthcheck.sh",
-    "scripts/pi-stage3-activation-validate.sh"
+    "scripts/pi-stage3-activation-validate.sh",
+    "scripts/pi-beta-activation-validate.sh"
   ]
 }

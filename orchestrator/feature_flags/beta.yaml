@@ -2,3 +2,13 @@
 # Only list flags that differ from defaults.yaml
 
 magic_link_login: true
+
+# Pi Dev Studio — Phase 14 beta Stage 3 activation
+# (knowledge + skills + templates). Stage 4 payments remains OFF.
+# Source contract: overlays/pi-stage3-activation.yaml
+# Production/defaults remain Stage 0 (all Pi flags false).
+# Rollback: remove these four keys (or set them false) and redeploy/restart.
+pi_knowledge: true
+pi_skills: true
+pi_templates: true
+pi_payments_template: false

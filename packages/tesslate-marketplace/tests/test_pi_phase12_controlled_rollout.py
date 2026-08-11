@@ -79,14 +79,20 @@ def test_phase11_surfaces_present():
 
 
 def test_no_pi_feature_enabled_by_default_across_envs():
-    """Guarantees: no Pi feature becomes enabled by default."""
-    for env in ("docker", "minikube", "desktop", "beta", "production"):
+    """Stage 0 envs stay OFF; Phase 14 beta holds operator-approved Stage 3 only."""
+    for env in ("docker", "minikube", "desktop", "production"):
         flags = _resolved_flags_for_env(env)
         for flag in PI_FLAGS:
             assert flags[flag] is False, f"{env}:{flag}"
 
+    beta = _resolved_flags_for_env("beta")
+    assert beta["pi_knowledge"] is True
+    assert beta["pi_skills"] is True
+    assert beta["pi_templates"] is True
+    assert beta["pi_payments_template"] is False
+
     for path in _FLAGS_DIR.glob("*.yaml"):
-        if path.name == "defaults.yaml":
+        if path.name in {"defaults.yaml", "beta.yaml"}:
             continue
         overrides = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
         for flag in PI_FLAGS:
