@@ -151,7 +151,7 @@ export default function DeploymentSettings() {
     <>
       <SettingsSection
         title="Deployment Providers"
-        description="Connect your cloud accounts to deploy projects directly from OpenSail"
+        description="Connect your cloud accounts to deploy projects directly from Pi Dev Studio"
       >
         {/* Info Box */}
         <div className="p-4 bg-blue-500/10 border border-blue-500/20 rounded-xl">

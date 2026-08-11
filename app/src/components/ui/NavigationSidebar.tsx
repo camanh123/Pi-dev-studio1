@@ -40,6 +40,8 @@ import { useTeam } from '../../contexts/TeamContext';
 import { modKey } from '../../lib/keyboard-registry';
 import type { CreditBalanceResponse } from '../../types/billing';
 import { usePendingApprovals } from '../../hooks/usePendingApprovals';
+import { PiDevStudioWordmark, PiDevStudioMark } from './PiDevStudioMark';
+import { PRODUCT_NAME } from '../../lib/branding';
 
 interface NavigationSidebarProps {
   activePage:
@@ -403,8 +405,36 @@ export function NavigationSidebar({
         duration: 0.25,
         ease: [0.22, 1, 0.36, 1],
       }}
-      className={`${forceVisible ? 'flex' : 'hidden md:flex'} flex-col h-full bg-[var(--sidebar-bg)] overflow-x-hidden`}
+      className={`${forceVisible ? 'flex' : 'hidden md:flex'} flex-col h-full bg-[var(--sidebar-bg)] overflow-x-hidden border-r border-[var(--sidebar-border)]`}
     >
+      {/* Product brand */}
+      <div
+        className="flex-shrink-0 flex items-center"
+        style={{ padding: isExpanded ? '14px 14px 8px' : '12px 0 6px', justifyContent: isExpanded ? 'flex-start' : 'center' }}
+      >
+        {isExpanded ? (
+          <button
+            type="button"
+            onClick={() => navigate('/home')}
+            className="min-w-0 rounded-[var(--radius-medium)] px-1 py-0.5 hover:bg-[var(--sidebar-hover)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)]"
+            aria-label={`${PRODUCT_NAME} home`}
+          >
+            <PiDevStudioWordmark markSize={28} showTagline />
+          </button>
+        ) : (
+          <Tooltip content={PRODUCT_NAME} side="right" delay={200}>
+            <button
+              type="button"
+              onClick={() => navigate('/home')}
+              className="flex h-8 w-8 items-center justify-center rounded-[var(--radius-medium)] hover:bg-[var(--sidebar-hover)] transition-colors"
+              aria-label={`${PRODUCT_NAME} home`}
+            >
+              <PiDevStudioMark size={24} />
+            </button>
+          </Tooltip>
+        )}
+      </div>
+
       {/* Team Switcher + Collapse toggle — top row */}
       <div
         ref={userDropdownRef}
@@ -527,7 +557,7 @@ export function NavigationSidebar({
                           {team.name}
                         </span>
                         {team.is_personal ? (
-                          <span className="text-[9px] text-[#f89521] flex-shrink-0">Personal</span>
+                          <span className="text-[9px] text-[var(--accent-gold,#C9A227)] flex-shrink-0">Personal</span>
                         ) : team.role === 'admin' ? (
                           <span className="text-[9px] text-[var(--primary)] flex-shrink-0">
                             Admin

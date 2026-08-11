@@ -666,7 +666,9 @@ export default function Dashboard() {
             </svg>
           </button>
 
-          <h2 className="text-xs font-semibold text-[var(--text)] flex-1">Workspaces</h2>
+          <h2 className="text-xs font-semibold text-[var(--text)] flex-1 tracking-wide">
+            Workspaces
+          </h2>
 
           {canCreateProject && (
             <>

@@ -3,11 +3,11 @@ import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { authApi, revokeServerSession } from '../lib/api';
 import { useAuth } from '../contexts/AuthContext';
 import { PulsingGridSpinner } from '../components/PulsingGridSpinner';
-import { MiniAsteroids } from '../components/MiniAsteroids';
-import { TesslateLogo } from '../components/ui/TesslateLogo';
+import { PiDevStudioWordmark } from '../components/ui/PiDevStudioMark';
 import { useTheme } from '../theme/ThemeContext';
 import { useFeatureFlag } from '../contexts/useFeatureFlag';
 import { isLocalDemoModeAllowed } from '../lib/localDemoMode';
+import { PRODUCT_HERO, PRODUCT_HERO_SUPPORT, PRODUCT_NAME, PRODUCT_TAGLINE } from '../lib/branding';
 import toast from 'react-hot-toast';
 
 type LoginMode = 'password' | 'magic-email' | 'magic-sent' | 'magic-code';
@@ -323,22 +323,72 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex">
-      {/* Left side - White form section */}
-      <div className="w-full lg:w-1/2 bg-white flex items-center justify-center p-6 sm:p-12">
-        <div className="w-full max-w-md">
-          {/* Logo */}
-          <div className="mb-8">
-            <div className="w-12 h-12 flex items-center justify-center">
-              <TesslateLogo width={48} height={38} className="text-black" />
-            </div>
+    <div className="min-h-screen flex flex-col lg:flex-row studio-app-bg bg-[#0B0A14]">
+      {/* Left — brand hero */}
+      <div className="relative hidden lg:flex lg:w-[48%] xl:w-1/2 flex-col justify-between p-10 xl:p-14 overflow-hidden">
+        <div
+          aria-hidden
+          className="absolute inset-0"
+          style={{
+            background:
+              'radial-gradient(ellipse 70% 50% at 20% 20%, rgba(124,58,237,0.35), transparent 60%), radial-gradient(ellipse 50% 40% at 80% 80%, rgba(201,162,39,0.12), transparent 55%), linear-gradient(165deg, #0B0A14 0%, #16122A 55%, #1A1040 100%)',
+          }}
+        />
+        <div
+          aria-hidden
+          className="absolute inset-0 opacity-40"
+          style={{
+            backgroundImage:
+              'radial-gradient(1.5px 1.5px at 18% 22%, rgba(255,255,255,0.55), transparent), radial-gradient(1px 1px at 72% 38%, rgba(245,215,142,0.5), transparent), radial-gradient(1.5px 1.5px at 44% 78%, rgba(255,255,255,0.35), transparent), radial-gradient(1px 1px at 88% 12%, rgba(167,139,250,0.6), transparent)',
+            backgroundSize: '100% 100%',
+          }}
+        />
+        <div className="relative z-10">
+          <PiDevStudioWordmark markSize={36} showTagline inverted />
+        </div>
+        <div className="relative z-10 max-w-lg py-16">
+          <p className="mb-3 text-xs font-semibold uppercase tracking-[0.16em] text-[#F5D78E]">
+            {PRODUCT_TAGLINE}
+          </p>
+          <h1 className="font-heading text-4xl xl:text-5xl font-semibold tracking-tight text-white leading-[1.15]">
+            {PRODUCT_HERO}
+          </h1>
+          <p className="mt-4 text-base text-white/70 leading-relaxed">{PRODUCT_HERO_SUPPORT}</p>
+          <ul className="mt-8 space-y-3 text-sm text-white/55">
+            <li className="flex items-center gap-2">
+              <span className="h-1.5 w-1.5 rounded-full bg-[#C9A227]" />
+              AI agents that write and ship real apps
+            </li>
+            <li className="flex items-center gap-2">
+              <span className="h-1.5 w-1.5 rounded-full bg-[#A78BFA]" />
+              Workspaces, marketplace, and library in one studio
+            </li>
+            <li className="flex items-center gap-2">
+              <span className="h-1.5 w-1.5 rounded-full bg-[#7C3AED]" />
+              Built for the Pi ecosystem — not price speculation
+            </li>
+          </ul>
+        </div>
+        <p className="relative z-10 text-xs text-white/35">
+          {PRODUCT_NAME} — developer tools for the Pi ecosystem
+        </p>
+      </div>
+
+      {/* Right — auth card */}
+      <div className="flex-1 flex items-center justify-center p-5 sm:p-10 lg:p-12">
+        <div className="w-full max-w-[420px] rounded-2xl border border-white/10 bg-[#141225]/95 backdrop-blur-md shadow-[0_24px_80px_rgba(0,0,0,0.45)] p-6 sm:p-8">
+          {/* Mobile brand */}
+          <div className="mb-6 lg:hidden">
+            <PiDevStudioWordmark markSize={32} showTagline />
           </div>
 
           {/* Heading */}
-          <div className="mb-8">
-            <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-3">Welcome back</h1>
-            <p className="text-gray-600 text-sm leading-relaxed">
-              Sign in to your account to continue building amazing AI-powered applications.
+          <div className="mb-7">
+            <h1 className="font-heading text-2xl sm:text-3xl font-semibold text-white mb-2">
+              Welcome back
+            </h1>
+            <p className="text-white/55 text-sm leading-relaxed">
+              Sign in to continue building with {PRODUCT_NAME}.
             </p>
           </div>
 
@@ -346,7 +396,7 @@ export default function Login() {
             /* OTP Verification UI */
             <div className="space-y-6">
               <div className="text-center">
-                <p className="text-gray-600 text-sm">
+                <p className="text-white/55 text-sm">
                   We sent a 6-digit code to <strong>{formData.email}</strong>
                 </p>
               </div>
@@ -366,7 +416,7 @@ export default function Login() {
                     onChange={(e) => handleOtpChange(index, e.target.value)}
                     onKeyDown={(e) => handleOtpKeyDown(index, e)}
                     onPaste={index === 0 ? handleOtpPaste : undefined}
-                    className="w-12 h-14 text-center text-2xl font-bold bg-gray-50 border-2 border-gray-200 text-gray-900 rounded-xl focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent transition-all"
+                    className="w-12 h-14 text-center text-2xl font-bold bg-white/5 border border-white/15 text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-[#7C3AED] focus:border-transparent transition-all"
                   />
                 ))}
               </div>
@@ -375,7 +425,7 @@ export default function Login() {
               <button
                 onClick={handleVerify2fa}
                 disabled={loading || otpCode.join('').length !== 6}
-                className="w-full bg-black text-white py-3.5 px-4 rounded-xl hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed font-semibold transition-all duration-200 text-sm"
+                className="w-full bg-[#7C3AED] text-white py-3.5 px-4 rounded-xl hover:bg-[#8B5CF6] disabled:opacity-50 disabled:cursor-not-allowed font-semibold transition-all duration-200 text-sm"
               >
                 {loading ? (
                   <div className="flex items-center justify-center gap-2">
@@ -391,14 +441,14 @@ export default function Login() {
               <div className="flex items-center justify-between text-sm">
                 <button
                   onClick={handleBack}
-                  className="text-gray-500 hover:text-gray-700 transition-colors"
+                  className="text-white/45 hover:text-white/80 transition-colors"
                 >
                   Back to login
                 </button>
                 <button
                   onClick={handleResendCode}
                   disabled={resendCooldown > 0}
-                  className="text-black hover:text-gray-700 font-medium disabled:text-gray-400 disabled:cursor-not-allowed transition-colors"
+                  className="text-[#C4B5FD] hover:text-white font-medium disabled:text-white/30 disabled:cursor-not-allowed transition-colors"
                 >
                   {resendCooldown > 0 ? `Resend in ${resendCooldown}s` : 'Resend code'}
                 </button>
@@ -415,7 +465,7 @@ export default function Login() {
                 <button
                   onClick={handleGoogleLogin}
                   disabled={loading}
-                  className="w-full flex items-center justify-center gap-3 bg-white border-2 border-gray-200 text-gray-700 py-3 px-4 rounded-xl hover:bg-gray-50 hover:border-gray-300 disabled:opacity-50 disabled:cursor-not-allowed font-medium transition-all duration-200 text-sm"
+                  className="w-full flex items-center justify-center gap-3 bg-white/5 border border-white/15 text-white/90 py-3 px-4 rounded-xl hover:bg-white/10 hover:border-white/25 disabled:opacity-50 disabled:cursor-not-allowed font-medium transition-all duration-200 text-sm"
                 >
                   <svg className="w-5 h-5" viewBox="0 0 24 24">
                     <path
@@ -441,7 +491,7 @@ export default function Login() {
                 <button
                   onClick={handleGithubLogin}
                   disabled={loading}
-                  className="w-full flex items-center justify-center gap-3 bg-white border-2 border-gray-200 text-gray-700 py-3 px-4 rounded-xl hover:bg-gray-50 hover:border-gray-300 disabled:opacity-50 disabled:cursor-not-allowed font-medium transition-all duration-200 text-sm"
+                  className="w-full flex items-center justify-center gap-3 bg-white/5 border border-white/15 text-white/90 py-3 px-4 rounded-xl hover:bg-white/10 hover:border-white/25 disabled:opacity-50 disabled:cursor-not-allowed font-medium transition-all duration-200 text-sm"
                 >
                   <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
                     <path
@@ -456,11 +506,11 @@ export default function Login() {
 
               {/* Divider */}
               <div className="mb-6 flex items-center">
-                <div className="flex-1 border-t border-gray-200"></div>
-                <span className="px-4 text-gray-400 text-xs font-medium">
+                <div className="flex-1 border-t border-white/10"></div>
+                <span className="px-4 text-white/35 text-xs font-medium">
                   Or sign in with email
                 </span>
-                <div className="flex-1 border-t border-gray-200"></div>
+                <div className="flex-1 border-t border-white/10"></div>
               </div>
 
               <form onSubmit={handleMagicLinkRequest} className="space-y-4">
@@ -468,7 +518,7 @@ export default function Login() {
                   type="email"
                   value={magicEmail}
                   onChange={(e) => setMagicEmail(e.target.value)}
-                  className="w-full bg-gray-50 border border-gray-200 text-gray-900 px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent transition-all placeholder:text-gray-400 text-sm"
+                  className="w-full bg-white/5 border border-white/15 text-white px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#7C3AED] focus:border-transparent transition-all placeholder:text-white/35 text-sm"
                   placeholder="Email address"
                   required
                   autoComplete="email"
@@ -478,7 +528,7 @@ export default function Login() {
                 <button
                   type="submit"
                   disabled={loading || !magicEmail}
-                  className="w-full bg-black text-white py-3.5 px-4 rounded-xl hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed font-semibold transition-all duration-200 text-sm"
+                  className="w-full bg-[#7C3AED] text-white py-3.5 px-4 rounded-xl hover:bg-[#8B5CF6] disabled:opacity-50 disabled:cursor-not-allowed font-semibold transition-all duration-200 text-sm"
                 >
                   {loading ? (
                     <div className="flex items-center justify-center gap-2">
@@ -493,7 +543,7 @@ export default function Login() {
                   <button
                     type="button"
                     onClick={handleSwitchToPassword}
-                    className="text-gray-500 hover:text-gray-700 text-sm transition-colors"
+                    className="text-white/45 hover:text-white/80 text-sm transition-colors"
                   >
                     Sign in with password instead
                   </button>
@@ -504,7 +554,7 @@ export default function Login() {
             /* Magic Link — sent, waiting */
             <div className="space-y-6">
               <div className="text-center">
-                <p className="text-gray-600 text-sm">
+                <p className="text-white/55 text-sm">
                   We sent a sign-in link to <strong>{magicEmail}</strong>. Click the link in your
                   email, or enter the 6-digit code we emailed.
                 </p>
@@ -515,21 +565,21 @@ export default function Login() {
                   setMode('magic-code');
                   setTimeout(() => otpInputRefs.current[0]?.focus(), 100);
                 }}
-                className="w-full bg-black text-white py-3.5 px-4 rounded-xl hover:bg-gray-800 font-semibold transition-all duration-200 text-sm"
+                className="w-full bg-[#7C3AED] text-white py-3.5 px-4 rounded-xl hover:bg-[#8B5CF6] font-semibold transition-all duration-200 text-sm"
               >
                 Enter code instead
               </button>
               <div className="flex items-center justify-between text-sm">
                 <button
                   onClick={handleBackToMagicEmail}
-                  className="text-gray-500 hover:text-gray-700 transition-colors"
+                  className="text-white/45 hover:text-white/80 transition-colors"
                 >
                   Use a different email
                 </button>
                 <button
                   onClick={handleMagicLinkResend}
                   disabled={resendCooldown > 0}
-                  className="text-black hover:text-gray-700 font-medium disabled:text-gray-400 disabled:cursor-not-allowed transition-colors"
+                  className="text-[#C4B5FD] hover:text-white font-medium disabled:text-white/30 disabled:cursor-not-allowed transition-colors"
                 >
                   {resendCooldown > 0 ? `Resend in ${resendCooldown}s` : 'Resend email'}
                 </button>
@@ -539,7 +589,7 @@ export default function Login() {
             /* Magic Link — code entry */
             <div className="space-y-6">
               <div className="text-center">
-                <p className="text-gray-600 text-sm">
+                <p className="text-white/55 text-sm">
                   Enter the 6-digit code we sent to <strong>{magicEmail}</strong>
                 </p>
               </div>
@@ -557,14 +607,14 @@ export default function Login() {
                     onChange={(e) => handleOtpChange(index, e.target.value)}
                     onKeyDown={(e) => handleOtpKeyDown(index, e)}
                     onPaste={index === 0 ? handleOtpPaste : undefined}
-                    className="w-12 h-14 text-center text-2xl font-bold bg-gray-50 border-2 border-gray-200 text-gray-900 rounded-xl focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent transition-all"
+                    className="w-12 h-14 text-center text-2xl font-bold bg-white/5 border border-white/15 text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-[#7C3AED] focus:border-transparent transition-all"
                   />
                 ))}
               </div>
               <button
                 onClick={handleMagicLinkVerify}
                 disabled={loading || otpCode.join('').length !== 6}
-                className="w-full bg-black text-white py-3.5 px-4 rounded-xl hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed font-semibold transition-all duration-200 text-sm"
+                className="w-full bg-[#7C3AED] text-white py-3.5 px-4 rounded-xl hover:bg-[#8B5CF6] disabled:opacity-50 disabled:cursor-not-allowed font-semibold transition-all duration-200 text-sm"
               >
                 {loading ? (
                   <div className="flex items-center justify-center gap-2">
@@ -578,14 +628,14 @@ export default function Login() {
               <div className="flex items-center justify-between text-sm">
                 <button
                   onClick={handleBackToMagicEmail}
-                  className="text-gray-500 hover:text-gray-700 transition-colors"
+                  className="text-white/45 hover:text-white/80 transition-colors"
                 >
                   Use a different email
                 </button>
                 <button
                   onClick={handleMagicLinkResend}
                   disabled={resendCooldown > 0}
-                  className="text-black hover:text-gray-700 font-medium disabled:text-gray-400 disabled:cursor-not-allowed transition-colors"
+                  className="text-[#C4B5FD] hover:text-white font-medium disabled:text-white/30 disabled:cursor-not-allowed transition-colors"
                 >
                   {resendCooldown > 0 ? `Resend in ${resendCooldown}s` : 'Resend code'}
                 </button>
@@ -602,7 +652,7 @@ export default function Login() {
                     type="email"
                     value={formData.email}
                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    className="w-full bg-gray-50 border border-gray-200 text-gray-900 px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent transition-all placeholder:text-gray-400 text-sm"
+                    className="w-full bg-white/5 border border-white/15 text-white px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#7C3AED] focus:border-transparent transition-all placeholder:text-white/35 text-sm"
                     placeholder="Email address"
                     required
                     autoComplete="email"
@@ -616,7 +666,7 @@ export default function Login() {
                     type="password"
                     value={formData.password}
                     onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                    className="w-full bg-gray-50 border border-gray-200 text-gray-900 px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent transition-all placeholder:text-gray-400 text-sm"
+                    className="w-full bg-white/5 border border-white/15 text-white px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#7C3AED] focus:border-transparent transition-all placeholder:text-white/35 text-sm"
                     placeholder="Password"
                     required
                     autoComplete="current-password"
@@ -628,7 +678,7 @@ export default function Login() {
                 <div className="flex justify-end">
                   <Link
                     to="/forgot-password"
-                    className="text-gray-500 hover:text-gray-700 text-xs transition-colors"
+                    className="text-white/45 hover:text-white/80 text-xs transition-colors"
                   >
                     Forgot password?
                   </Link>
@@ -637,7 +687,7 @@ export default function Login() {
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full bg-black text-white py-3.5 px-4 rounded-xl hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed font-semibold transition-all duration-200 text-sm mt-2"
+                  className="w-full bg-[#7C3AED] text-white py-3.5 px-4 rounded-xl hover:bg-[#8B5CF6] disabled:opacity-50 disabled:cursor-not-allowed font-semibold transition-all duration-200 text-sm mt-2"
                 >
                   {loading ? (
                     <div className="flex items-center justify-center gap-2">
@@ -657,7 +707,7 @@ export default function Login() {
                     type="button"
                     onClick={handleSwitchToMagicEmail}
                     disabled={loading}
-                    className="text-gray-500 hover:text-gray-700 text-sm transition-colors"
+                    className="text-white/45 hover:text-white/80 text-sm transition-colors"
                   >
                     Sign in with an email link instead
                   </button>
@@ -666,12 +716,12 @@ export default function Login() {
 
               {/* Sign up link */}
               <div className="mt-6 text-center">
-                <p className="text-gray-600 text-sm">
+                <p className="text-white/55 text-sm">
                   Don't have an account?{' '}
                   <Link
                     to="/register"
                     state={{ from: redirectTo !== '/home' ? redirectTo : undefined }}
-                    className="text-black hover:text-gray-700 font-semibold transition-colors underline"
+                    className="text-[#C4B5FD] hover:text-white font-semibold transition-colors underline"
                   >
                     Sign up
                   </Link>
@@ -682,8 +732,8 @@ export default function Login() {
 
           {/* DEV-only Local Demo Mode — never rendered in production builds */}
           {localDemoAllowed && !twoFaRequired && (
-            <div className="mt-8 pt-6 border-t border-dashed border-gray-200">
-              <p className="text-xs text-amber-800 mb-3 text-center">
+            <div className="mt-8 pt-6 border-t border-dashed border-white/15">
+              <p className="text-xs text-[#F5D78E]/90 mb-3 text-center">
                 Local development: preview the authenticated UI without a backend.
               </p>
               <button
@@ -691,73 +741,13 @@ export default function Login() {
                 data-testid="enter-local-demo"
                 onClick={handleEnterLocalDemo}
                 disabled={loading}
-                className="w-full border-2 border-amber-700 text-amber-900 bg-amber-50 py-3 px-4 rounded-xl hover:bg-amber-100 disabled:opacity-50 disabled:cursor-not-allowed font-semibold transition-all duration-200 text-sm"
+                className="w-full border border-[#C9A227]/50 text-[#F5D78E] bg-[#C9A227]/10 py-3 px-4 rounded-xl hover:bg-[#C9A227]/20 disabled:opacity-50 disabled:cursor-not-allowed font-semibold transition-all duration-200 text-sm"
               >
                 Enter Local Demo Mode
               </button>
             </div>
           )}
         </div>
-      </div>
-
-      {/* Right side - Dark hero section */}
-      <div
-        className="hidden lg:flex lg:w-1/2 items-center justify-center p-12 relative overflow-hidden"
-        style={{
-          background: 'linear-gradient(180deg, #0a0a0f 0%, #1a1a2e 50%, #16213e 100%)',
-        }}
-      >
-        {/* Starry background effect */}
-        <div
-          className="absolute inset-0"
-          style={{
-            backgroundImage: `
-            radial-gradient(2px 2px at 20% 30%, white, transparent),
-            radial-gradient(2px 2px at 60% 70%, white, transparent),
-            radial-gradient(1px 1px at 50% 50%, white, transparent),
-            radial-gradient(1px 1px at 80% 10%, white, transparent),
-            radial-gradient(2px 2px at 90% 60%, white, transparent),
-            radial-gradient(1px 1px at 33% 80%, white, transparent),
-            radial-gradient(1px 1px at 70% 40%, white, transparent)
-          `,
-            backgroundSize: '200% 200%',
-            backgroundPosition: '0% 0%, 100% 100%, 50% 50%, 0% 100%, 100% 0%, 33% 100%, 70% 40%',
-            opacity: 0.5,
-          }}
-        ></div>
-
-        {/* Shooting star effect */}
-        <div
-          className="absolute top-20 right-40 w-32 h-0.5 bg-gradient-to-r from-transparent via-white to-transparent opacity-70"
-          style={{
-            transform: 'rotate(-45deg)',
-            animation: 'shooting-star 3s ease-in-out infinite',
-          }}
-        ></div>
-
-        <div className="relative z-10 max-w-lg text-center">
-          {/* Mini Asteroids Game */}
-          <div className="relative w-full h-80 sm:h-96">
-            <MiniAsteroids />
-          </div>
-        </div>
-
-        {/* CSS for shooting star animation */}
-        <style>{`
-          @keyframes shooting-star {
-            0% {
-              opacity: 0;
-              transform: translateX(-100px) translateY(100px) rotate(-45deg);
-            }
-            50% {
-              opacity: 0.7;
-            }
-            100% {
-              opacity: 0;
-              transform: translateX(300px) translateY(-300px) rotate(-45deg);
-            }
-          }
-        `}</style>
       </div>
     </div>
   );

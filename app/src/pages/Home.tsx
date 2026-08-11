@@ -18,6 +18,8 @@ import { ChannelsCard } from '../components/channels/ChannelsCard';
 import { projectsApi, tasksApi } from '../lib/api';
 import { useTeam } from '../contexts/TeamContext';
 import { useAuth } from '../contexts/AuthContext';
+import { StudioPageHero } from '../components/ui/StudioSurface';
+import { PRODUCT_HERO, PRODUCT_HERO_SUPPORT, PRODUCT_NAME } from '../lib/branding';
 
 type RecentProject = {
   id: string;
@@ -119,8 +121,8 @@ function ActionCard({ icon, title, tooltip, onClick, disabled, badge }: ActionCa
           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)] focus-visible:ring-offset-2',
           'focus-visible:ring-offset-[var(--bg)]',
           disabled
-            ? 'cursor-not-allowed bg-[var(--surface)] opacity-60'
-            : 'cursor-pointer bg-[var(--surface)] hover:bg-[var(--surface-hover)]',
+            ? 'cursor-not-allowed studio-surface border border-[var(--border)] opacity-60'
+            : 'cursor-pointer studio-surface border border-[var(--border)] hover:border-[var(--border-hover)] hover:bg-[var(--surface-hover)]',
         ].join(' ')}
       >
         {badge && (
@@ -545,33 +547,56 @@ export default function Home() {
   const handleOpenProject = (slug: string) => navigate(`/project/${slug}`);
 
   return (
-    <div className="h-full w-full overflow-y-auto">
-      <div className="flex min-h-full items-center justify-center">
-        <div className="flex w-full max-w-[560px] flex-col gap-6 px-4 py-8 sm:px-6 sm:py-12 lg:px-8 lg:py-16">
-          {/* Welcome header + plan line */}
-          <header className="flex flex-col items-center gap-2 text-center">
-            <h1 className="text-xl font-semibold tracking-tight text-[var(--text)] sm:text-2xl">
-              Welcome to OpenSail, {greetingName}
-            </h1>
-            <p className="flex items-center gap-1.5 text-xs text-[var(--text-muted)] sm:text-sm">
-              <span>{tierLabel} Plan</span>
-              {!isPaidPlan && (
-                <>
-                  <span aria-hidden="true">·</span>
-                  <button
-                    type="button"
-                    onClick={handleUpgrade}
-                    className="text-[var(--primary)] hover:underline focus-visible:outline-none focus-visible:underline"
-                  >
-                    Upgrade
-                  </button>
-                </>
-              )}
-            </p>
-          </header>
+    <div className="h-full w-full overflow-y-auto studio-app-bg">
+      <div className="mx-auto flex min-h-full w-full max-w-5xl flex-col gap-8 px-4 py-8 sm:px-6 sm:py-10 lg:px-8 lg:py-12">
+        <StudioPageHero
+          eyebrow={PRODUCT_NAME}
+          title={PRODUCT_HERO}
+          subtitle={`${PRODUCT_HERO_SUPPORT} Welcome back, ${greetingName}.`}
+          actions={
+            <>
+              <button
+                type="button"
+                onClick={() => setShowCreateDialog(true)}
+                className="inline-flex items-center justify-center rounded-xl bg-[var(--primary)] px-4 py-2.5 text-sm font-semibold text-white shadow-[0_8px_24px_rgba(124,58,237,0.35)] transition hover:bg-[var(--primary-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)]"
+              >
+                Create your first app
+              </button>
+              <button
+                type="button"
+                onClick={() => navigate('/marketplace')}
+                className="inline-flex items-center justify-center rounded-xl border border-[var(--border-hover)] bg-transparent px-4 py-2.5 text-sm font-semibold text-[var(--text)] transition hover:bg-[var(--surface-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)]"
+              >
+                Explore Marketplace
+              </button>
+              <p className="w-full text-xs text-[var(--text-muted)] sm:w-auto sm:ml-1">
+                <span>{tierLabel} Plan</span>
+                {!isPaidPlan && (
+                  <>
+                    <span aria-hidden="true"> · </span>
+                    <button
+                      type="button"
+                      onClick={handleUpgrade}
+                      className="text-[var(--accent-gold,#C9A227)] hover:underline focus-visible:outline-none focus-visible:underline"
+                    >
+                      Upgrade
+                    </button>
+                  </>
+                )}
+              </p>
+            </>
+          }
+        />
 
-          {/* Action grid — 2x2 */}
-          <div className="grid grid-cols-2 gap-2 sm:gap-2.5">
+        {/* Quick actions */}
+        <section aria-labelledby="quick-actions-heading" className="flex flex-col gap-3">
+          <h2
+            id="quick-actions-heading"
+            className="text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)]"
+          >
+            Quick actions
+          </h2>
+          <div className="grid grid-cols-2 gap-2.5 lg:grid-cols-3">
             <ActionCard
               icon={<FolderPlus size={20} weight="duotone" />}
               title="New Workspace"
@@ -605,9 +630,10 @@ export default function Home() {
             <ConnectorsCard onClick={() => navigate('/marketplace/browse/mcp_server')} />
             <ChannelsCard onClick={() => navigate('/library?tab=channels')} />
           </div>
+        </section>
 
-          {/* Recent Projects — finder-style list */}
-          <section aria-labelledby="recent-projects-heading" className="flex flex-col gap-2">
+        {/* Recent Projects — finder-style list */}
+        <section aria-labelledby="recent-projects-heading" className="flex flex-col gap-2">
             <div className="flex items-center justify-between">
               <h2
                 id="recent-projects-heading"
@@ -629,23 +655,29 @@ export default function Home() {
 
             {recentLoading ? (
               <div
-                className="rounded-[var(--radius)] bg-[var(--surface)] px-4 py-6 text-center text-xs text-[var(--text-muted)]"
+                className="studio-surface rounded-[var(--radius)] px-4 py-6 text-center text-xs text-[var(--text-muted)]"
                 role="status"
                 aria-live="polite"
               >
                 Loading workspaces…
               </div>
             ) : recent.length === 0 ? (
-              <div className="flex flex-col items-center gap-2 rounded-[var(--radius)] bg-[var(--surface)] px-4 py-8 text-center">
-                <FolderOpen size={24} className="text-[var(--text-subtle)]" />
-                <p className="text-sm text-[var(--text-muted)]">No workspaces yet</p>
-                <p className="text-xs text-[var(--text-subtle)]">
-                  Click <span className="text-[var(--text-muted)]">New Workspace</span> above to
-                  create your first one.
+              <div className="studio-surface-elevated flex flex-col items-center gap-2 rounded-[var(--radius)] px-4 py-10 text-center border border-[var(--border)]">
+                <FolderOpen size={28} className="text-[var(--primary)]" />
+                <p className="text-sm font-medium text-[var(--text)]">No apps yet</p>
+                <p className="max-w-sm text-xs text-[var(--text-muted)]">
+                  Create your first app to start building with AI for the Pi ecosystem.
                 </p>
+                <button
+                  type="button"
+                  onClick={() => setShowCreateDialog(true)}
+                  className="mt-2 rounded-lg bg-[var(--primary)] px-3 py-2 text-xs font-semibold text-white hover:bg-[var(--primary-hover)]"
+                >
+                  Create your first app
+                </button>
               </div>
             ) : (
-              <ul className="flex flex-col overflow-hidden rounded-[var(--radius)] bg-[var(--surface)]">
+              <ul className="studio-surface flex flex-col overflow-hidden rounded-[var(--radius)] border border-[var(--border)]">
                 {recent.map((p) => (
                   <li key={p.id}>
                     <button
@@ -659,7 +691,7 @@ export default function Home() {
                       <Folder
                         size={18}
                         weight="duotone"
-                        className="flex-shrink-0 text-[var(--text-muted)]"
+                        className="flex-shrink-0 text-[var(--primary)]"
                       />
                       <div className="flex min-w-0 flex-1 flex-col">
                         <span className="truncate text-sm text-[var(--text)]">{p.name}</span>
@@ -679,8 +711,7 @@ export default function Home() {
                 ))}
               </ul>
             )}
-          </section>
-        </div>
+        </section>
       </div>
 
       {/* Modals */}

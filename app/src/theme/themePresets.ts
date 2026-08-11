@@ -1,5 +1,5 @@
 /**
- * Theme System for OpenSail
+ * Theme System for Pi Dev Studio
  *
  * Themes are loaded from the API (database) and cached in memory.
  * This file provides the TypeScript interfaces and helper functions
@@ -23,84 +23,85 @@ const themesCache: Map<string, Theme> = new Map();
 let themesLoaded = false;
 let themesLoading: Promise<void> | null = null;
 
-// Default fallback theme (used before API loads)
+// Default fallback theme (used before API loads / when API unavailable)
+// Pi Dev Studio visual language: violet primary, deep navy surfaces, gold accent.
 const DEFAULT_FALLBACK_THEME: Theme = {
   id: 'default-dark',
-  name: 'Default Dark',
+  name: 'Pi Dev Studio Dark',
   mode: 'dark',
-  author: 'Tesslate',
-  version: '1.0.0',
-  description: 'The classic Tesslate dark theme',
+  author: 'Pi Dev Studio',
+  version: '2.0.0',
+  description: 'Pi-inspired dark theme for Pi Dev Studio',
   colors: {
-    primary: '#F89521',
-    primaryHover: '#fa9f35',
-    primaryRgb: '248, 149, 33',
-    accent: '#00D9FF',
-    background: '#111113',
-    surface: '#1a1a1c',
-    surfaceHover: '#252527',
-    text: '#ffffff',
-    textMuted: 'rgba(255, 255, 255, 0.6)',
-    textSubtle: 'rgba(255, 255, 255, 0.4)',
-    border: 'rgba(255, 255, 255, 0.1)',
-    borderHover: 'rgba(255, 255, 255, 0.2)',
+    primary: '#7C3AED',
+    primaryHover: '#8B5CF6',
+    primaryRgb: '124, 58, 237',
+    accent: '#A78BFA',
+    background: '#0B0A14',
+    surface: '#141225',
+    surfaceHover: '#1E1A33',
+    text: '#F8F7FF',
+    textMuted: 'rgba(248, 247, 255, 0.65)',
+    textSubtle: 'rgba(248, 247, 255, 0.42)',
+    border: 'rgba(167, 139, 250, 0.14)',
+    borderHover: 'rgba(167, 139, 250, 0.28)',
     sidebar: {
-      background: '#0a0a0a',
-      text: '#ffffff',
-      border: 'rgba(255, 255, 255, 0.1)',
-      hover: 'rgba(255, 255, 255, 0.05)',
-      active: 'rgba(255, 255, 255, 0.1)',
+      background: '#090812',
+      text: '#F8F7FF',
+      border: 'rgba(167, 139, 250, 0.12)',
+      hover: 'rgba(124, 58, 237, 0.14)',
+      active: 'rgba(124, 58, 237, 0.22)',
     },
     input: {
-      background: '#1a1a1c',
-      border: 'rgba(255, 255, 255, 0.1)',
-      borderFocus: '#3a3c40',
-      text: '#ffffff',
-      placeholder: 'rgba(255, 255, 255, 0.4)',
+      background: '#1A1730',
+      border: 'rgba(167, 139, 250, 0.16)',
+      borderFocus: '#7C3AED',
+      text: '#F8F7FF',
+      placeholder: 'rgba(248, 247, 255, 0.4)',
     },
     scrollbar: {
-      thumb: 'rgba(255, 255, 255, 0.2)',
-      thumbHover: 'rgba(255, 255, 255, 0.3)',
+      thumb: 'rgba(167, 139, 250, 0.28)',
+      thumbHover: 'rgba(167, 139, 250, 0.42)',
       track: 'transparent',
     },
     code: {
-      inlineBackground: 'rgba(248, 149, 33, 0.15)',
-      inlineText: '#fbbf68',
+      inlineBackground: 'rgba(124, 58, 237, 0.18)',
+      inlineText: '#C4B5FD',
       blockBackground: 'rgba(0, 0, 0, 0.4)',
-      blockBorder: 'rgba(255, 255, 255, 0.1)',
-      blockText: '#e2e2e2',
+      blockBorder: 'rgba(167, 139, 250, 0.14)',
+      blockText: '#E8E4FF',
     },
     status: {
       error: '#ef4444',
       errorRgb: '239, 68, 68',
       success: '#22c55e',
       successRgb: '34, 197, 94',
-      warning: '#f59e0b',
-      warningRgb: '245, 158, 11',
-      info: '#3b82f6',
-      infoRgb: '59, 130, 246',
+      warning: '#c9a227',
+      warningRgb: '201, 162, 39',
+      info: '#6366f1',
+      infoRgb: '99, 102, 241',
       purple: '#a855f7',
       purpleRgb: '168, 85, 247',
     },
     shadow: {
-      small: '0 1px 2px rgba(0, 0, 0, 0.3)',
-      medium: '0 4px 6px rgba(0, 0, 0, 0.3)',
-      large: '0 10px 15px rgba(0, 0, 0, 0.3)',
+      small: '0 1px 2px rgba(0, 0, 0, 0.35)',
+      medium: '0 8px 24px rgba(12, 8, 28, 0.45)',
+      large: '0 16px 40px rgba(8, 4, 24, 0.55)',
     },
   },
   typography: {
     fontFamily:
-      "'Instrument Sans', Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
-    fontFamilyHeading: "'Instrument Sans', -apple-system, BlinkMacSystemFont, sans-serif",
+      "'DM Sans', 'Instrument Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+    fontFamilyHeading: "'Outfit', 'Instrument Sans', -apple-system, BlinkMacSystemFont, sans-serif",
     fontFamilyMono: "JetBrains Mono, Menlo, Monaco, 'Courier New', monospace",
     fontSizeBase: '14px',
     lineHeight: '1.5',
   },
   spacing: {
-    radiusSmall: '4px',
-    radiusMedium: '6px',
-    radiusLarge: '8px',
-    radiusXl: '12px',
+    radiusSmall: '6px',
+    radiusMedium: '10px',
+    radiusLarge: '14px',
+    radiusXl: '18px',
   },
   animation: {
     durationFast: '150ms',
@@ -261,6 +262,9 @@ export function applyThemePreset(theme: Theme): void {
   safeSetProperty(root, '--primary-hover', colors.primaryHover);
   safeSetProperty(root, '--primary-rgb', colors.primaryRgb);
   safeSetProperty(root, '--accent', colors.accent);
+  // Gold accent is part of the Pi Dev Studio visual language (not theme-API driven yet)
+  safeSetProperty(root, '--accent-gold', '#C9A227');
+  safeSetProperty(root, '--accent-gold-soft', 'rgba(201, 162, 39, 0.18)');
 
   // === BACKGROUNDS ===
   safeSetProperty(root, '--bg', colors.background);

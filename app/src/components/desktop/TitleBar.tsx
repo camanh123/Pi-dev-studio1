@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react';
+import { PRODUCT_NAME } from '../../lib/branding';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Platform detection (runs once at module load — stable for the session)
@@ -146,7 +147,7 @@ export function TitleBar() {
         pointerEvents: 'none',
       }}
     >
-      OpenSail
+      {PRODUCT_NAME}
     </span>
   );
 
