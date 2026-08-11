@@ -109,6 +109,9 @@
   "release_gate_tests": [
     "packages/tesslate-marketplace/tests/test_pi_phase10_release_gate.py",
     "packages/tesslate-marketplace/tests/test_pi_payments_state_safety.py",
-    "packages/tesslate-marketplace/tests/test_pi_phase9_production_hardening.py"
+    "packages/tesslate-marketplace/tests/test_pi_phase9_production_hardening.py",
+    "packages/tesslate-marketplace/tests/test_pi_phase11_launch_readiness.py",
+    "packages/tesslate-marketplace/tests/test_pi_phase12_controlled_rollout.py",
+    "scripts/pi-ops-healthcheck.sh"
   ]
 }

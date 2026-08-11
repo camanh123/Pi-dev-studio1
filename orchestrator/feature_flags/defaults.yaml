@@ -70,6 +70,8 @@ marketplace_federation_cross_source_ranking: false
 #   pi.templates          → pi_templates
 #   pi.payments_template  → pi_payments_template
 # Defaults OFF. Enable per-environment via {env}.yaml overrides when ready.
+# Operator must explicitly enable each Pi rollout stage. Stages do NOT
+# auto-promote (Stage 1 ↛ 2 ↛ 3 ↛ 4). Emergency baseline = all four OFF.
 pi_knowledge: false
 pi_skills: false
 pi_templates: false
