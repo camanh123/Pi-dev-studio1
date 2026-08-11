@@ -233,15 +233,22 @@ ALL PASS (static / simulated). Live cluster security soak NOT EXECUTED.
 
 | Suite | Result |
 |-------|--------|
-| Phase 15 gate | PASS (recorded after run) |
+| Marketplace Phase 6–15 matrix (incl. payment safety, skills, starters) | **204 passed** |
+| Phase 15 gate | PASS |
 | Phase 14 beta activation | PASS |
 | Phase 13 activation | PASS |
-| Phase 10–12 / 9 / payment safety / skills / starters | PASS (marketplace matrix) |
-| Pi-integration | PASS |
-| Frontend Pi UX | PASS |
-| Orchestrator full suite | env limitation (`fastapi_users`) if missing |
+| Pi-integration | **16 passed** |
+| Frontend Pi UX | **18 passed** |
+| `pi-ops-health` / Phase 15 soak script | PASS |
+| Orchestrator full suite | env limitation if `fastapi_users` missing |
 
-Exact counts are recorded in the Phase 15 commit / PR after the validation run.
+Exact labels reconfirmed after run:
+
+```text
+SIMULATED SOAK — PASS
+LIVE SOAK — NOT EXECUTED
+LIVE BETA ROLLBACK — NOT EXECUTED
+```
 
 ---
 
