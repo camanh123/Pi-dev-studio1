@@ -2,6 +2,15 @@ import { useState, useEffect, useMemo, useRef, type KeyboardEvent, type MouseEve
 import { X, Folder, CaretRight, FileDashed } from '@phosphor-icons/react';
 import { marketplaceApi, projectsApi } from '../../lib/api';
 import { useTeam } from '../../contexts/TeamContext';
+import { useFeatureFlag } from '../../contexts/useFeatureFlag';
+import { PiSetupChecklist } from '../pi/PiSetupChecklist';
+import {
+  PI_FEATURE_FLAGS,
+  getEnabledPiFeaturedSlugs,
+  isPiBaseSlug,
+  isPiBaseVisible,
+  persistPiSetupBaseSlug,
+} from '../../lib/piDevStudio';
 
 interface MarketplaceBase {
   id: string;
@@ -35,7 +44,7 @@ interface CreateProjectModalProps {
   initialEmptyMode?: boolean;
 }
 
-const FEATURED_SLUGS = ['nextjs-16', 'vite-react-fastapi', 'vite-react-go', 'expo-default'];
+const CORE_FEATURED_SLUGS = ['nextjs-16', 'vite-react-fastapi', 'vite-react-go', 'expo-default'];
 
 // Synthetic "empty" tile that sits alongside the featured templates. Selected
 // by reference equality (id === EMPTY_TILE.id), so the rest of the picker
@@ -69,6 +78,22 @@ export function CreateProjectModal({
   initialEmptyMode = false,
 }: CreateProjectModalProps) {
   const { activeTeam } = useTeam();
+  const piTemplatesEnabled = useFeatureFlag(PI_FEATURE_FLAGS.templates);
+  const piPaymentsTemplateEnabled = useFeatureFlag(PI_FEATURE_FLAGS.paymentsTemplate);
+  const piKnowledgeEnabled = useFeatureFlag(PI_FEATURE_FLAGS.knowledge);
+
+  const piFlagState = useMemo(
+    () => ({
+      pi_templates: piTemplatesEnabled,
+      pi_payments_template: piPaymentsTemplateEnabled,
+    }),
+    [piTemplatesEnabled, piPaymentsTemplateEnabled]
+  );
+
+  const featuredSlugs = useMemo(
+    () => [...CORE_FEATURED_SLUGS, ...getEnabledPiFeaturedSlugs(piFlagState)],
+    [piFlagState]
+  );
 
   const [projectName, setProjectName] = useState('');
   const [selectedBase, setSelectedBase] = useState<MarketplaceBase | null>(null);
@@ -96,19 +121,23 @@ export function CreateProjectModal({
     ])
       .then(([allBasesRes, userBasesRes]) => {
         if (cancelled) return;
-        const bases = (allBasesRes.bases || allBasesRes || []) as MarketplaceBase[];
-        const userBasesData = (userBasesRes.bases || userBasesRes || []) as MarketplaceBase[];
+        const bases = ((allBasesRes.bases || allBasesRes || []) as MarketplaceBase[]).filter((b) =>
+          isPiBaseVisible(b.slug, piFlagState)
+        );
+        const userBasesData = (
+          (userBasesRes.bases || userBasesRes || []) as MarketplaceBase[]
+        ).filter((b) => isPiBaseVisible(b.slug, piFlagState));
         setAllBases(bases);
         setUserBases(userBasesData);
         setSelectedBase((current) => {
-          if (current) return current;
+          if (current && isPiBaseVisible(current.slug, piFlagState)) return current;
           if (initialBaseId) {
             const preselected = bases.find((b) => b.id === initialBaseId);
             if (preselected) return preselected;
           }
-          const defaultBase = FEATURED_SLUGS.map((slug) => bases.find((b) => b.slug === slug)).find(
-            Boolean
-          );
+          const defaultBase = featuredSlugs
+            .map((slug) => bases.find((b) => b.slug === slug))
+            .find(Boolean);
           return defaultBase || EMPTY_TILE;
         });
       })
@@ -116,7 +145,7 @@ export function CreateProjectModal({
     return () => {
       cancelled = true;
     };
-  }, [isOpen, initialBaseId]);
+  }, [isOpen, initialBaseId, piFlagState, featuredSlugs]);
 
   // Load existing sibling folders (used in the breadcrumb subtitle).
   useEffect(() => {
@@ -154,16 +183,16 @@ export function CreateProjectModal({
     }
   }, [isOpen]);
 
-  // Tiles in render order: Empty first, then the 4 featured templates we have
-  // resolved IDs for, then any extras from the user's library.
+  // Tiles in render order: Empty first, then featured templates (core + gated
+  // Pi starters when flags allow), then any extras from the user's library.
   const tiles = useMemo<MarketplaceBase[]>(() => {
-    const featured = FEATURED_SLUGS.map((slug) => allBases.find((b) => b.slug === slug)).filter(
-      Boolean
-    ) as MarketplaceBase[];
+    const featured = featuredSlugs
+      .map((slug) => allBases.find((b) => b.slug === slug))
+      .filter(Boolean) as MarketplaceBase[];
     const featuredIds = new Set(featured.map((b) => b.id));
     const userOnly = userBases.filter((b) => !featuredIds.has(b.id));
     return [EMPTY_TILE, ...featured, ...userOnly];
-  }, [allBases, userBases]);
+  }, [allBases, userBases, featuredSlugs]);
 
   const isInLibrary = (baseId: string) => userBases.some((b) => b.id === baseId);
 
@@ -209,11 +238,21 @@ export function CreateProjectModal({
   const handleConfirm = () => {
     if (!canSubmit) return;
     if (isEmptyMode) {
+      persistPiSetupBaseSlug(null);
       onConfirm(trimmedName, '', undefined);
       return;
     }
+    persistPiSetupBaseSlug(selectedBase!.slug);
     onConfirm(trimmedName, selectedBase!.id, baseVersion || undefined);
   };
+
+  const selectedPiSlug =
+    selectedBase &&
+    selectedBase.id !== EMPTY_TILE.id &&
+    isPiBaseSlug(selectedBase.slug) &&
+    isPiBaseVisible(selectedBase.slug, piFlagState)
+      ? selectedBase.slug
+      : null;
 
   const handleKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
     if (e.key === 'Enter' && canSubmit) {
@@ -243,7 +282,9 @@ export function CreateProjectModal({
     >
       <div
         onClick={stopPropagation}
-        className="flex max-h-[calc(100dvh-1rem)] w-full max-w-[520px] flex-col overflow-hidden rounded-[var(--radius)] border border-[var(--border)] bg-[var(--surface)] shadow-[var(--shadow-large)] sm:max-h-[calc(100dvh-2rem)]"
+        className={`flex max-h-[calc(100dvh-1rem)] w-full flex-col overflow-hidden rounded-[var(--radius)] border border-[var(--border)] bg-[var(--surface)] shadow-[var(--shadow-large)] sm:max-h-[calc(100dvh-2rem)] ${
+          selectedPiSlug ? 'max-w-[720px]' : 'max-w-[520px]'
+        }`}
       >
         {/* Header */}
         <div className="flex items-start justify-between gap-3 border-b border-[var(--border)] bg-[var(--sidebar-bg)] px-4 py-3">
@@ -373,6 +414,16 @@ export function CreateProjectModal({
               })}
             </div>
           </div>
+
+          {selectedPiSlug && (
+            <div className="mt-4">
+              <PiSetupChecklist
+                baseSlug={selectedPiSlug}
+                showKnowledgeNote={piKnowledgeEnabled}
+                compact
+              />
+            </div>
+          )}
 
           {recent.length > 0 && (
             <div className="mt-4">

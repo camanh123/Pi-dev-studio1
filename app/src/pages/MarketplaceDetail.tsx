@@ -48,6 +48,15 @@ import {
   generateBreadcrumbStructuredData,
 } from '../components/SEO';
 import { useMarketplaceAuth } from '../contexts/MarketplaceAuthContext';
+import { useFeatureFlag } from '../contexts/useFeatureFlag';
+import { PiMarketplaceSafety } from '../components/pi/PiMarketplaceSafety';
+import {
+  PI_FEATURE_FLAGS,
+  isPiBaseSlug,
+  isPiBaseVisible,
+  isPiSkillSlug,
+  isPiSkillVisible,
+} from '../lib/piDevStudio';
 
 function formatRelativeDate(dateStr: string): string {
   const date = new Date(dateStr);
@@ -91,6 +100,10 @@ export default function MarketplaceDetail() {
   const navigate = useNavigate();
   const { isAuthenticated } = useMarketplaceAuth();
   const { teamSwitchKey } = useTeam();
+  const piTemplatesEnabled = useFeatureFlag(PI_FEATURE_FLAGS.templates);
+  const piPaymentsTemplateEnabled = useFeatureFlag(PI_FEATURE_FLAGS.paymentsTemplate);
+  const piSkillsEnabled = useFeatureFlag(PI_FEATURE_FLAGS.skills);
+  const piKnowledgeEnabled = useFeatureFlag(PI_FEATURE_FLAGS.knowledge);
   const [item, setItem] = useState<MarketplaceItem | null>(null);
   const [relatedItems, setRelatedItems] = useState<MarketplaceItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -442,6 +455,31 @@ export default function MarketplaceDetail() {
     return null;
   }
 
+  const piBaseHidden =
+    isPiBaseSlug(item.slug) &&
+    !isPiBaseVisible(item.slug, {
+      pi_templates: piTemplatesEnabled,
+      pi_payments_template: piPaymentsTemplateEnabled,
+    });
+  const piSkillHidden =
+    isPiSkillSlug(item.slug) &&
+    !isPiSkillVisible(item.slug, { pi_skills: piSkillsEnabled });
+
+  if (piBaseHidden || piSkillHidden) {
+    return (
+      <div className="h-screen flex flex-col items-center justify-center gap-3 bg-[var(--bg)] px-6 text-center">
+        <p className="text-sm text-[var(--text)]">This Pi marketplace item is not enabled.</p>
+        <p className="text-xs text-[var(--text-muted)] max-w-md">
+          Enable the corresponding Pi feature flag (`pi_templates`, `pi_payments_template`, or
+          `pi_skills`) to discover it.
+        </p>
+        <button type="button" className="btn" onClick={() => navigate('/marketplace')}>
+          Back to marketplace
+        </button>
+      </div>
+    );
+  }
+
   // Generate SEO structured data
   const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://tesslate.com';
   const productStructuredData = generateProductStructuredData({
@@ -560,6 +598,14 @@ export default function MarketplaceDetail() {
 
               {/* Description */}
               <p className="text-xs text-[var(--text-muted)] mb-4">{item.description}</p>
+
+              {(isPiBaseSlug(item.slug) || isPiSkillSlug(item.slug)) && (
+                <PiMarketplaceSafety
+                  slug={item.slug}
+                  itemType={item.item_type}
+                  showKnowledgeNote={piKnowledgeEnabled}
+                />
+              )}
 
               {/* Author */}
               <div className="flex items-center gap-4 mb-6">

@@ -5,6 +5,15 @@ import { Robot, Wrench, ArrowRight, ArrowLeft, SpinnerGap } from '@phosphor-icon
 import { setupApi } from '../lib/api';
 import { ServiceConfigForm } from '../components/ServiceConfigForm';
 import { ModelSelector } from '../components/chat/ModelSelector';
+import { PiSetupChecklist } from '../components/pi/PiSetupChecklist';
+import { useFeatureFlag } from '../contexts/useFeatureFlag';
+import {
+  PI_FEATURE_FLAGS,
+  clearPiSetupBaseSlug,
+  isPiBaseVisible,
+  readPiSetupBaseSlug,
+  type PiBaseSlug,
+} from '../lib/piDevStudio';
 import type { TesslateConfig } from '../types/tesslateConfig';
 
 type Tab = 'agent' | 'manual';
@@ -25,6 +34,9 @@ const DEFAULT_CONFIG: TesslateConfig = {
 export default function ProjectSetup() {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
+  const piTemplatesEnabled = useFeatureFlag(PI_FEATURE_FLAGS.templates);
+  const piPaymentsTemplateEnabled = useFeatureFlag(PI_FEATURE_FLAGS.paymentsTemplate);
+  const piKnowledgeEnabled = useFeatureFlag(PI_FEATURE_FLAGS.knowledge);
 
   const [activeTab, setActiveTab] = useState<Tab>('agent');
   const [config, setConfig] = useState<TesslateConfig>(DEFAULT_CONFIG);
@@ -33,6 +45,7 @@ export default function ProjectSetup() {
   const [isSaving, setIsSaving] = useState(false);
   const [existingConfig, setExistingConfig] = useState(false);
   const [analyzeModel, setAnalyzeModel] = useState('glm-5');
+  const [piBaseSlug, setPiBaseSlug] = useState<PiBaseSlug | null>(null);
 
   // Load existing config on mount
   useEffect(() => {
@@ -52,6 +65,22 @@ export default function ProjectSetup() {
       })
       .catch(() => {});
   }, [slug]);
+
+  // Additive Pi checklist when create-flow stashed a Pi MarketplaceBase slug.
+  useEffect(() => {
+    const stored = readPiSetupBaseSlug();
+    if (
+      stored &&
+      isPiBaseVisible(stored, {
+        pi_templates: piTemplatesEnabled,
+        pi_payments_template: piPaymentsTemplateEnabled,
+      })
+    ) {
+      setPiBaseSlug(stored);
+    } else {
+      setPiBaseSlug(null);
+    }
+  }, [piTemplatesEnabled, piPaymentsTemplateEnabled]);
 
   const handleAnalyze = useCallback(async () => {
     if (!slug || isAnalyzing) return;
@@ -103,6 +132,7 @@ export default function ProjectSetup() {
     try {
       const result = await setupApi.saveConfig(slug, config);
       toast.success('Configuration saved!');
+      clearPiSetupBaseSlug();
 
       // Navigate to builder with the primary container
       if (result.primary_container_id) {
@@ -132,8 +162,10 @@ export default function ProjectSetup() {
         primaryApp: 'workspace',
       };
       await setupApi.saveConfig(slug, defaultConfig);
+      clearPiSetupBaseSlug();
       navigate(`/project/${slug}/builder`);
     } catch {
+      clearPiSetupBaseSlug();
       navigate(`/project/${slug}/builder`);
     } finally {
       setIsSaving(false);
@@ -193,6 +225,14 @@ export default function ProjectSetup() {
 
       {/* Content */}
       <div className="flex-1 max-w-3xl mx-auto w-full px-4 sm:px-6 py-6">
+        {piBaseSlug && (
+          <div className="mb-6">
+            <PiSetupChecklist
+              baseSlug={piBaseSlug}
+              showKnowledgeNote={piKnowledgeEnabled}
+            />
+          </div>
+        )}
         {activeTab === 'agent' ? (
           <div className="space-y-6">
             {/* Analysis Section */}

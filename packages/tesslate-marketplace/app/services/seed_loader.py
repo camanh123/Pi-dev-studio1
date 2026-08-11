@@ -89,6 +89,7 @@ SEED_FILES: tuple[str, ...] = (
     "community_bases.json",
     "skills_opensource.json",
     "skills_tesslate.json",
+    "skills_pi.json",
     "mcp_servers.json",
     "themes.json",
     "workflow_templates.json",

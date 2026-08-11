@@ -7,6 +7,7 @@ import { MiniAsteroids } from '../components/MiniAsteroids';
 import { TesslateLogo } from '../components/ui/TesslateLogo';
 import { useTheme } from '../theme/ThemeContext';
 import { useFeatureFlag } from '../contexts/useFeatureFlag';
+import { isLocalDemoModeAllowed } from '../lib/localDemoMode';
 import toast from 'react-hot-toast';
 
 type LoginMode = 'password' | 'magic-email' | 'magic-sent' | 'magic-code';
@@ -15,8 +16,9 @@ export default function Login() {
   const navigate = useNavigate();
   const location = useLocation();
   const { refreshUserTheme } = useTheme();
-  const { checkAuth, isAuthenticated } = useAuth();
+  const { checkAuth, isAuthenticated, enterLocalDemo } = useAuth();
   const redirectTo = (location.state as { from?: string })?.from || '/home';
+  const localDemoAllowed = isLocalDemoModeAllowed();
 
   // Redirect away if already authenticated (covers desktop auto-login injecting
   // the token after the page has mounted).
@@ -303,6 +305,19 @@ export default function Login() {
       window.location.href = authUrl;
     } catch {
       toast.error('Failed to initiate Google login');
+      setLoading(false);
+    }
+  };
+
+  const handleEnterLocalDemo = async () => {
+    if (!localDemoAllowed) return;
+    setLoading(true);
+    try {
+      await enterLocalDemo();
+      toast.success('Entered Local Demo Mode (UI preview only)');
+      navigate(redirectTo, { state: { fromLogin: true } });
+    } catch {
+      toast.error('Could not enter Local Demo Mode');
       setLoading(false);
     }
   };
@@ -663,6 +678,24 @@ export default function Login() {
                 </p>
               </div>
             </>
+          )}
+
+          {/* DEV-only Local Demo Mode — never rendered in production builds */}
+          {localDemoAllowed && !twoFaRequired && (
+            <div className="mt-8 pt-6 border-t border-dashed border-gray-200">
+              <p className="text-xs text-amber-800 mb-3 text-center">
+                Local development: preview the authenticated UI without a backend.
+              </p>
+              <button
+                type="button"
+                data-testid="enter-local-demo"
+                onClick={handleEnterLocalDemo}
+                disabled={loading}
+                className="w-full border-2 border-amber-700 text-amber-900 bg-amber-50 py-3 px-4 rounded-xl hover:bg-amber-100 disabled:opacity-50 disabled:cursor-not-allowed font-semibold transition-all duration-200 text-sm"
+              >
+                Enter Local Demo Mode
+              </button>
+            </div>
           )}
         </div>
       </div>

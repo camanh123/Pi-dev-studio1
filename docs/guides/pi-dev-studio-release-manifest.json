@@ -1,0 +1,126 @@
+{
+  "schema_version": 1,
+  "release_version": "0.1.0-rc.10",
+  "phase": 10,
+  "phase_name": "release-candidate",
+  "release_date": "2026-08-11",
+  "product": "Pi Dev Studio",
+  "repository": "https://github.com/camanh123/Pi-dev-studio1.git",
+  "based_on_phase": {
+    "phase": 9,
+    "verdict": "PASS WITH KNOWN LIMITATIONS"
+  },
+  "knowledge_corpus": {
+    "package": "packages/pi-integration",
+    "package_version": "0.1.0",
+    "catalog_schema_version": 1,
+    "catalog_path": "packages/pi-integration/src/pi_integration/knowledge/catalog.json",
+    "unsupported_claims_path": "packages/pi-integration/src/pi_integration/knowledge/unsupported_claims.json",
+    "authority": "Phase 1 catalog remains the sole normative provenance authority"
+  },
+  "skills": {
+    "seed_file": "packages/tesslate-marketplace/app/seeds/skills_pi.json",
+    "version": "0.1.0",
+    "is_builtin": false,
+    "slugs": [
+      "pi-sdk",
+      "pi-auth",
+      "pi-platform-api",
+      "pi-payments",
+      "pi-developer-portal",
+      "pi-browser",
+      "pi-compliance"
+    ],
+    "assignment": "AgentSkillAssignment required before load_skill"
+  },
+  "starters": [
+    {
+      "slug": "pi-web-starter",
+      "version": "0.1.0",
+      "default_branch": "base/pi-web-starter",
+      "git_repo_url": "https://github.com/camanh123/Pi-dev-studio1.git",
+      "template_path": "bases/pi-web-starter",
+      "bundle_path": "packages/tesslate-marketplace/app/bundles/base/pi-web-starter/0.1.0.tar.zst",
+      "scope": "sdk-init-only"
+    },
+    {
+      "slug": "pi-auth-starter",
+      "version": "0.1.0",
+      "default_branch": "base/pi-auth-starter",
+      "git_repo_url": "https://github.com/camanh123/Pi-dev-studio1.git",
+      "template_path": "bases/pi-auth-starter",
+      "bundle_path": "packages/tesslate-marketplace/app/bundles/base/pi-auth-starter/0.1.0.tar.zst",
+      "scope": "authenticate-and-me"
+    },
+    {
+      "slug": "pi-payments-starter",
+      "version": "0.1.0",
+      "default_branch": "base/pi-payments-starter",
+      "git_repo_url": "https://github.com/camanh123/Pi-dev-studio1.git",
+      "template_path": "bases/pi-payments-starter",
+      "bundle_path": "packages/tesslate-marketplace/app/bundles/base/pi-payments-starter/0.1.0.tar.zst",
+      "scope": "u2a-testnet-first"
+    }
+  ],
+  "marketplace_seed_state": {
+    "bases_seed": "packages/tesslate-marketplace/app/seeds/bases.json",
+    "skills_seed": "packages/tesslate-marketplace/app/seeds/skills_pi.json",
+    "summary": "packages/tesslate-marketplace/app/seeds/_summary.json",
+    "default_seed_version": "0.1.0",
+    "note": "Seed entries without an explicit version use seed_loader.DEFAULT_VERSION (0.1.0), matching published bundles."
+  },
+  "feature_flags": {
+    "defaults_file": "orchestrator/feature_flags/defaults.yaml",
+    "production_defaults": "OFF",
+    "beta_stage3": "ON (knowledge/skills/templates); payments OFF",
+    "beta_overlay": "orchestrator/feature_flags/beta.yaml",
+    "stage3_overlay_fragment": "orchestrator/feature_flags/overlays/pi-stage3-activation.yaml",
+    "public": true,
+    "flags": [
+      "pi_knowledge",
+      "pi_skills",
+      "pi_templates",
+      "pi_payments_template"
+    ],
+    "forbidden_registered_aliases": [
+      "pi.knowledge",
+      "pi.skills",
+      "pi.templates",
+      "pi.payments_template"
+    ]
+  },
+  "supported_official_source_catalog": {
+    "path": "packages/pi-integration/src/pi_integration/knowledge/catalog.json",
+    "entry_count": 12
+  },
+  "known_limitations": [
+    "Developer Portal registration remains manual",
+    "Domain validation remains manual",
+    "Sandbox authorization / Pi Browser verification remains manual",
+    "Mainnet transition requires human review",
+    "No App Studio API automation",
+    "No automatic Pi publishing",
+    "No wallet APIs / refunds / recurring / webhooks / A2U implementation",
+    "Pi skills require AgentSkillAssignment (not auto-builtin)",
+    "Feature flags default OFF",
+    "Payments starter local payment state is in-memory (demo; not durable Mainnet store)"
+  ],
+  "rollback": {
+    "safest_default": "Keep Pi feature flags OFF",
+    "procedure_doc": "docs/guides/pi-dev-studio-phase10-release-candidate.md#rollback-procedure"
+  },
+  "release_gate_tests": [
+    "packages/tesslate-marketplace/tests/test_pi_phase10_release_gate.py",
+    "packages/tesslate-marketplace/tests/test_pi_payments_state_safety.py",
+    "packages/tesslate-marketplace/tests/test_pi_phase9_production_hardening.py",
+    "packages/tesslate-marketplace/tests/test_pi_phase11_launch_readiness.py",
+    "packages/tesslate-marketplace/tests/test_pi_phase12_controlled_rollout.py",
+    "packages/tesslate-marketplace/tests/test_pi_phase13_controlled_production_activation.py",
+    "packages/tesslate-marketplace/tests/test_pi_phase14_beta_activation.py",
+    "packages/tesslate-marketplace/tests/test_pi_phase15_live_beta_soak.py",
+    "scripts/pi-ops-healthcheck.sh",
+    "scripts/pi-stage3-activation-validate.sh",
+    "scripts/pi-beta-activation-validate.sh",
+    "scripts/pi-live-beta-soak-validate.sh"
+  ]
+}

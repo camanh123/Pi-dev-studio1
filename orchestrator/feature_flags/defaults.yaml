@@ -62,6 +62,21 @@ marketplace_federation_attestations: false
 marketplace_federation_telemetry_opt_in: false
 marketplace_federation_cross_source_ranking: false
 
+# -- Pi Dev Studio (Phase 6) --------------------------------------------------
+# Phase 0.5 proposed dotted names (pi.knowledge, …). This repository's YAML
+# feature-flag schema uses snake_case keys, so the semantic mapping is:
+#   pi.knowledge          → pi_knowledge
+#   pi.skills             → pi_skills
+#   pi.templates          → pi_templates
+#   pi.payments_template  → pi_payments_template
+# Defaults OFF. Enable per-environment via {env}.yaml overrides when ready.
+# Operator must explicitly enable each Pi rollout stage. Stages do NOT
+# auto-promote (Stage 1 ↛ 2 ↛ 3 ↛ 4). Emergency baseline = all four OFF.
+pi_knowledge: false
+pi_skills: false
+pi_templates: false
+pi_payments_template: false
+
 # =============================================================================
 # Public flags — exposed via GET /api/feature-flags for the frontend.
 # Backend can access ALL flags. Only flags listed here are served to clients.
@@ -71,3 +86,7 @@ public:
   - magic_link_login
   - template_builder
   - enable_landing_page
+  - pi_knowledge
+  - pi_skills
+  - pi_templates
+  - pi_payments_template

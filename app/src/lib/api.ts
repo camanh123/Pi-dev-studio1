@@ -31,6 +31,7 @@ import type {
   SubmittedValues,
 } from '../types/nodeConfig';
 import { config } from '../config';
+import { isLocalDemoModeActive } from './localDemoMode';
 
 const API_URL = config.API_URL;
 
@@ -163,6 +164,12 @@ api.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
+
+    // Local Demo Mode (DEV-only): never refresh tokens or hard-redirect to /login.
+    // Preview UI may fire API calls that fail without a backend.
+    if (isLocalDemoModeActive()) {
+      return Promise.reject(error);
+    }
 
     // Handle 401 — attempt token refresh before logging out
     if (error.response?.status === 401 && originalRequest) {
