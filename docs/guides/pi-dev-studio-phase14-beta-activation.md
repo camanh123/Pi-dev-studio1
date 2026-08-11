@@ -236,18 +236,22 @@ ALL PASS
 
 | Suite | Result |
 |-------|--------|
-| Marketplace Phase 10–14 gates | run in Phase 14 validation |
-| Phase 11 launch readiness / clean-room | included |
-| Phase 12 controlled rollout | updated for intentional beta Stage 3 |
-| Phase 13 activation | production Stage 0 still asserted |
-| Phase 14 beta activation | new gate |
-| Pi-integration knowledge tests | included |
-| Frontend Pi UX | included when runnable |
-| Payment safety / starter bases | included |
-| `pi-ops-health` / beta validate script | PASS |
+| Marketplace Phase 6–8 | **17 passed** |
+| Marketplace Phase 9–14 + skills + starters + payment safety | **175 passed** |
+| Phase 11 launch readiness / clean-room (in above) | PASS |
+| Phase 12 controlled rollout (updated for beta Stage 3) | PASS |
+| Phase 13 activation (production Stage 0 still asserted) | PASS |
+| Phase 14 beta activation gate | PASS |
+| Pi-integration knowledge tests | **16 passed** |
+| Frontend Pi UX (`piDevStudio` / checklist / feature-flags) | **18 passed** |
+| Orchestrator `test_pi_feature_flags` | **NOT RUN** — environment missing `fastapi_users` (conftest import) |
+| `pi-ops-health` / beta + stage3 validate scripts | PASS |
 
 Do not weaken historical tests. Phase 12 env assertion evolved to allow
 **operator-approved beta Stage 3** while keeping other envs Stage 0.
+
+OpenSail full suite / orchestration was not modified. Missing `fastapi_users` is an
+environment limitation, not a Phase 14 product defect.
 
 ---
 
