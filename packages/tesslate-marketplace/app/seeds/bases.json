@@ -277,7 +277,7 @@
     "name": "Pi Payments Starter",
     "slug": "pi-payments-starter",
     "description": "Pi-compatible starter with official SDK auth plus generated-app U2A payments (Pi.createPayment + server approve/complete). Not OpenSail Stripe billing. Testnet-first. Server API Key required. Manual Developer Portal configuration. Mainnet requires human review.",
-    "long_description": "Extends Pi Auth Starter with documented User-To-App payments: Pi.createPayment callbacks, backend POST /v2/payments/{id}/approve and /complete with Key auth, incomplete-payment handling, and Testnet-first guidance. Server API Key is backend-only. No refunds, recurring, webhooks, A2U, wallet APIs, or OpenSail billing replacement. Skills: pi-payments, pi-auth, pi-sdk, pi-platform-api.",
+    "long_description": "Extends Pi Auth Starter with documented User-To-App payments: Pi.createPayment callbacks, backend POST /v2/payments/{id}/approve and /complete with Key auth, incomplete-payment handling, and Testnet-first guidance. Server API Key is backend-only. Local payment state is in-memory (demo only) — not Mainnet-production ready without durable persistence and human review. No refunds, recurring, webhooks, A2U, wallet APIs, automatic Mainnet publishing, or OpenSail billing replacement. Skills: pi-payments, pi-auth, pi-sdk, pi-platform-api.",
     "git_repo_url": "https://github.com/camanh123/Pi-dev-studio1.git",
     "default_branch": "base/pi-payments-starter",
     "category": "fullstack",
