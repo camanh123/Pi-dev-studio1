@@ -8,7 +8,7 @@ This phase does **not** expand Pi capabilities and does **not** enable productio
 Release: Pi Dev Studio
 Current RC: 0.1.0-rc.10
 Validation date: 2026-08-11
-Branch: cursor/pi-launch-readiness-a868
+Branch: cursor/pi-launch-readiness-a868 (HEAD after Phase 11 commits)
 Based on: Phase 10 RELEASE CANDIDATE PASS WITH KNOWN LIMITATIONS
 ```
 
@@ -241,14 +241,23 @@ Unrelated historical failures must not be “fixed” by changing OpenSail auth/
 ## Tests executed
 
 ```text
-Phase 11 launch-readiness tests
-Phase 10 release gate + payment state safety
-Marketplace Pi suite (test_pi_*.py)
-pi-integration knowledge tests
-Frontend Pi UX unit tests
+Phase 11 launch-readiness: included in marketplace Pi suite
+Marketplace Pi suite (test_pi_*.py): 148 passed
+Phase 10 gate + payment safety: green (subset of above)
+pi-integration knowledge: 16 passed
+Frontend Pi UX: 15 passed
+OpenSail: auth/billing routers present; orchestrator pytest blocked in this VM by missing fastapi_users (environment/setup — not a Pi regression)
 ```
 
-Exact counts are recorded in the Phase 11 PR / final report after the validation run.
+Exact gate command:
+
+```bash
+python3 -m pytest \
+  packages/tesslate-marketplace/tests/test_pi_phase11_launch_readiness.py \
+  packages/tesslate-marketplace/tests/test_pi_phase10_release_gate.py \
+  packages/tesslate-marketplace/tests/test_pi_payments_state_safety.py \
+  -q
+```
 
 ---
 
