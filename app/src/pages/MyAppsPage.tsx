@@ -482,7 +482,7 @@ export default function MyAppsPage() {
             </p>
             <button onClick={browse} className="btn btn-filled">
               <Plus className="w-3 h-3" />
-              Create your first app
+              Browse Marketplace
             </button>
           </div>
         ) : (
