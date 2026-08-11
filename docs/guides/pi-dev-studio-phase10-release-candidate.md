@@ -8,7 +8,7 @@ Machine-readable companion: [`pi-dev-studio-release-manifest.json`](./pi-dev-stu
 
 ```text
 Repository: https://github.com/camanh123/Pi-dev-studio1.git
-Commit/branch: cursor/pi-release-candidate-a868
+Commit/branch: f69726540fa2ebc261799b1aa9201b4d55c0f5d9 (cursor/pi-release-candidate-a868)
 Release version: 0.1.0-rc.10
 
 Architecture: PASS
