@@ -57,13 +57,87 @@ class PiOpsHealthReport:
     ok: bool
     checks: list[HealthCheckResult] = field(default_factory=list)
     flag_defaults: dict[str, bool] = field(default_factory=dict)
+    resolved_flags: dict[str, bool] = field(default_factory=dict)
+    resolved_env: str = "defaults"
 
     def to_dict(self) -> dict[str, Any]:
         return {
             "ok": self.ok,
             "flag_defaults": self.flag_defaults,
+            "resolved_env": self.resolved_env,
+            "resolved_flags": self.resolved_flags,
             "checks": [asdict(c) for c in self.checks],
         }
+
+
+def resolve_flags_for_env(env: str) -> dict[str, bool]:
+    """Resolve defaults + optional `{env}.yaml` overrides (orchestrator semantics)."""
+    import yaml
+
+    raw = yaml.safe_load((_FLAGS / "defaults.yaml").read_text(encoding="utf-8"))
+    flags = {k: v for k, v in raw.items() if k != "public" and isinstance(v, bool)}
+    env_path = _FLAGS / f"{env}.yaml"
+    if env_path.exists():
+        overrides = yaml.safe_load(env_path.read_text(encoding="utf-8")) or {}
+        for key, value in overrides.items():
+            if key == "public":
+                continue
+            if key not in flags:
+                raise ValueError(f"Unknown feature flag override '{key}' in {env}.yaml")
+            if not isinstance(value, bool):
+                raise ValueError(f"Flag '{key}' in {env}.yaml must be boolean")
+            flags[key] = value
+    return flags
+
+
+def load_stage3_activation_overlay() -> dict[str, bool]:
+    """Load operator Stage 3 overlay fragment (not auto-applied)."""
+    import yaml
+
+    path = _FLAGS / "overlays" / "pi-stage3-activation.yaml"
+    raw = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    out: dict[str, bool] = {}
+    for flag in PI_FLAGS:
+        if flag not in raw:
+            raise ValueError(f"Stage 3 overlay missing {flag}")
+        if not isinstance(raw[flag], bool):
+            raise ValueError(f"Stage 3 overlay {flag} must be boolean")
+        out[flag] = raw[flag]
+    return out
+
+
+def validate_stage3_activation_overlay() -> HealthCheckResult:
+    """Stage 1–3 ON, Stage 4 payments OFF — operator overlay contract."""
+    try:
+        overlay = load_stage3_activation_overlay()
+    except Exception as exc:  # noqa: BLE001 — surface as health detail
+        return HealthCheckResult("stage3_activation_overlay", False, str(exc))
+    if overlay["pi_knowledge"] is not True:
+        return HealthCheckResult("stage3_activation_overlay", False, "pi_knowledge must be true")
+    if overlay["pi_skills"] is not True:
+        return HealthCheckResult("stage3_activation_overlay", False, "pi_skills must be true")
+    if overlay["pi_templates"] is not True:
+        return HealthCheckResult("stage3_activation_overlay", False, "pi_templates must be true")
+    if overlay["pi_payments_template"] is not False:
+        return HealthCheckResult(
+            "stage3_activation_overlay",
+            False,
+            "pi_payments_template must remain false (Stage 4 not activated)",
+        )
+    return HealthCheckResult(
+        "stage3_activation_overlay",
+        True,
+        "Stage 3 overlay enables knowledge/skills/templates; payments OFF",
+    )
+
+
+def simulate_env_with_stage3_overlay(env: str = "production") -> dict[str, bool]:
+    """Dry-run: merge Stage 3 overlay onto resolved env flags (in memory only)."""
+    resolved = resolve_flags_for_env(env)
+    overlay = load_stage3_activation_overlay()
+    merged = dict(resolved)
+    merged.update(overlay)
+    return {flag: merged[flag] for flag in PI_FLAGS}
 
 
 def _git(*args: str) -> subprocess.CompletedProcess[str]:
@@ -261,12 +335,18 @@ def check_feature_flag_registration() -> HealthCheckResult:
     )
 
 
-def run_pi_ops_health(*, include_git_orphans: bool = True) -> PiOpsHealthReport:
-    """Run the Phase 12 operational health suite."""
+def run_pi_ops_health(
+    *,
+    include_git_orphans: bool = True,
+    env: str = "production",
+    include_stage3_overlay_check: bool = True,
+) -> PiOpsHealthReport:
+    """Run the Phase 12/13 operational health suite."""
     import yaml
 
     raw = yaml.safe_load((_FLAGS / "defaults.yaml").read_text(encoding="utf-8"))
     flag_defaults = {flag: bool(raw.get(flag)) for flag in PI_FLAGS}
+    resolved_flags = {flag: resolve_flags_for_env(env)[flag] for flag in PI_FLAGS}
 
     checks = [
         check_feature_flag_safe_defaults(),
@@ -278,14 +358,43 @@ def run_pi_ops_health(*, include_git_orphans: bool = True) -> PiOpsHealthReport:
     ]
     if include_git_orphans:
         checks.append(check_orphan_branch_resolution())
+    if include_stage3_overlay_check:
+        checks.append(validate_stage3_activation_overlay())
 
     ok = all(c.ok for c in checks)
-    return PiOpsHealthReport(ok=ok, checks=checks, flag_defaults=flag_defaults)
+    return PiOpsHealthReport(
+        ok=ok,
+        checks=checks,
+        flag_defaults=flag_defaults,
+        resolved_flags=resolved_flags,
+        resolved_env=env,
+    )
 
 
 def main() -> int:
-    report = run_pi_ops_health()
-    print(json.dumps(report.to_dict(), indent=2, sort_keys=True))
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Pi Dev Studio ops healthcheck")
+    parser.add_argument(
+        "--env",
+        default="production",
+        help="Environment overlay to resolve (default: production)",
+    )
+    parser.add_argument(
+        "--simulate-stage3",
+        action="store_true",
+        help="Print dry-run Stage 3 overlay merge without applying it",
+    )
+    args = parser.parse_args()
+    report = run_pi_ops_health(env=args.env)
+    payload = report.to_dict()
+    if args.simulate_stage3:
+        payload["simulated_stage3_flags"] = simulate_env_with_stage3_overlay(args.env)
+        payload["simulated_stage3_note"] = (
+            "In-memory only. production.yaml was not modified. "
+            "pi_payments_template remains false."
+        )
+    print(json.dumps(payload, indent=2, sort_keys=True))
     return 0 if report.ok else 1
 
 
