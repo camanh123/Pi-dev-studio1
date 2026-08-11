@@ -193,16 +193,25 @@ Environment limitation: live production cluster activation/rollback not executed
 ## 10. Regression tests
 
 ```text
-Phase 13 gate: see PR run
-Marketplace Pi suite (test_pi_*.py)
-Phase 10–12 gates (included)
-pi-integration
-Frontend Pi UX
-Payment state safety
-pi-ops-healthcheck / stage3 validate scripts
+Marketplace Pi suite (test_pi_*.py): 181 passed
+Phase 13 gate: included above
+pi-integration: 16 passed
+Frontend Pi UX: 15 passed
+pi-ops-healthcheck: OK (production resolved flags all OFF)
+pi-stage3-activation-validate: OK (simulated Stage 3 ON, payments OFF)
 ```
 
-Exact counts are recorded in the Phase 13 PR after the validation run.
+```bash
+python3 -m pytest \
+  packages/tesslate-marketplace/tests/test_pi_phase13_controlled_production_activation.py \
+  packages/tesslate-marketplace/tests/test_pi_phase12_controlled_rollout.py \
+  packages/tesslate-marketplace/tests/test_pi_phase11_launch_readiness.py \
+  packages/tesslate-marketplace/tests/test_pi_phase10_release_gate.py \
+  packages/tesslate-marketplace/tests/test_pi_payments_state_safety.py \
+  -q
+./scripts/pi-ops-healthcheck.sh
+./scripts/pi-stage3-activation-validate.sh
+```
 
 ---
 
