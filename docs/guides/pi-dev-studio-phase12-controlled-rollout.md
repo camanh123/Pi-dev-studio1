@@ -17,7 +17,7 @@ Operator approval: none (no production promotion)
 ```text
 Release: 0.1.0-rc.10
 Branch: cursor/pi-controlled-rollout-a868
-Commit: (set on PR HEAD)
+Commit: e5da03a52e4ced86d3a830ef0fcab384679b75cc
 
 Stage 0: PASS
 Stage 1: PASS (validated; NOT ACTIVATED in production)
