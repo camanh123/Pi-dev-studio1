@@ -1,0 +1,16 @@
+# Pi Dev Studio — Stage 3 controlled activation overlay (Phases 12–13)
+#
+# OPERATOR-APPLIED ONLY. This file is NOT auto-loaded by load_feature_flags().
+# Copy/merge these keys into the target environment overlay
+# (e.g. orchestrator/feature_flags/production.yaml or beta.yaml), then
+# redeploy/restart so deployment_env picks them up.
+#
+# Stage 4 payments remains OFF.
+# Do NOT set pi_payments_template: true without a separate security review.
+#
+# Rollback: remove these four keys (or set them false) and redeploy/restart.
+
+pi_knowledge: true
+pi_skills: true
+pi_templates: true
+pi_payments_template: false

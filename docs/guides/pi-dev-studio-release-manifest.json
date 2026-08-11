@@ -112,6 +112,8 @@
     "packages/tesslate-marketplace/tests/test_pi_phase9_production_hardening.py",
     "packages/tesslate-marketplace/tests/test_pi_phase11_launch_readiness.py",
     "packages/tesslate-marketplace/tests/test_pi_phase12_controlled_rollout.py",
-    "scripts/pi-ops-healthcheck.sh"
+    "packages/tesslate-marketplace/tests/test_pi_phase13_controlled_production_activation.py",
+    "scripts/pi-ops-healthcheck.sh",
+    "scripts/pi-stage3-activation-validate.sh"
   ]
 }
