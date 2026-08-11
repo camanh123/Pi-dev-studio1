@@ -160,7 +160,8 @@ export interface AuthUser {
 // =============================================================================
 
 export type AuthStatus = 'initializing' | 'authenticated' | 'unauthenticated';
-export type AuthMethod = 'token' | 'cookie' | null;
+/** `local_demo` is DEV-only UI preview — never a real JWT/cookie session. */
+export type AuthMethod = 'token' | 'cookie' | 'local_demo' | null;
 
 export interface AuthState {
   status: AuthStatus;
@@ -186,6 +187,8 @@ export interface AuthContextValue extends AuthState {
   refreshUser: () => Promise<void>;
   refreshToken: () => Promise<void>;
   clearError: () => void;
+  /** DEV-only: enter Local Demo Mode (no-op path when not allowed). */
+  enterLocalDemo: () => Promise<void>;
 
   // Role checking
   hasRole: (role: string) => boolean;

@@ -33,6 +33,13 @@ import {
 } from './auth/types';
 import { authApi, revokeServerSession } from '../lib/api';
 import { config } from '../config';
+import {
+  isLocalDemoModeAllowed,
+  isLocalDemoModeActive,
+  enterLocalDemoMode,
+  exitLocalDemoMode,
+  LOCAL_DEMO_USER,
+} from '../lib/localDemoMode';
 
 const API_URL = config.API_URL;
 
@@ -71,6 +78,17 @@ const isTauriDesktop = (): boolean => {
  * 'initializing'.
  */
 const getInitialState = (): AuthState => {
+  // DEV-only Local Demo Mode: authenticate from session/env without touching the API.
+  if (isLocalDemoModeActive()) {
+    return {
+      status: 'authenticated',
+      user: LOCAL_DEMO_USER,
+      authMethod: 'local_demo',
+      error: null,
+      lastChecked: Date.now(),
+    };
+  }
+
   const inTauri = isTauriDesktop();
   const hasToken = typeof window !== 'undefined' && !!localStorage.getItem('token');
   const optimisticAuth = hasToken && !inTauri;
@@ -170,6 +188,17 @@ export function AuthProvider({ children }: AuthProviderProps) {
       // Prevent concurrent checks unless forced
       if (checkInProgressRef.current && !options?.force) {
         return state.status === 'authenticated';
+      }
+
+      // Local Demo Mode: no JWT, no /api/users/me — in-memory preview user only.
+      if (isLocalDemoModeActive()) {
+        if (mountedRef.current) {
+          dispatch({
+            type: 'AUTH_SUCCESS',
+            payload: { user: LOCAL_DEMO_USER, method: 'local_demo' },
+          });
+        }
+        return true;
       }
 
       // Abort any in-flight request
@@ -347,11 +376,18 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const logout = useCallback(async () => {
     abortControllerRef.current?.abort();
 
-    await revokeServerSession();
+    const wasLocalDemo = state.authMethod === 'local_demo' || isLocalDemoModeActive();
+
+    if (!wasLocalDemo) {
+      await revokeServerSession();
+    }
 
     // Clear local state
     localStorage.removeItem('token');
-    sessionStorage.clear();
+    exitLocalDemoMode();
+    if (!wasLocalDemo) {
+      sessionStorage.clear();
+    }
 
     // Notify other tabs
     window.dispatchEvent(
@@ -364,7 +400,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     if (mountedRef.current) {
       dispatch({ type: 'AUTH_LOGOUT' });
     }
-  }, []);
+  }, [state.authMethod]);
 
   // ==========================================================================
   // Refresh User Data
@@ -372,6 +408,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   const refreshUser = useCallback(async () => {
     if (state.status !== 'authenticated') return;
+    // Demo mode has no backend user record
+    if (state.authMethod === 'local_demo' || isLocalDemoModeActive()) return;
 
     try {
       const token = localStorage.getItem('token');
@@ -386,19 +424,21 @@ export function AuthProvider({ children }: AuthProviderProps) {
     } catch (error) {
       console.error('[Auth] Failed to refresh user:', error);
     }
-  }, [state.status]);
+  }, [state.status, state.authMethod]);
 
   // ==========================================================================
   // Token Refresh
   // ==========================================================================
 
   const refreshToken = useCallback(async () => {
+    // Never call refresh endpoints in Local Demo Mode
+    if (state.authMethod === 'local_demo' || isLocalDemoModeActive()) return;
     try {
       await authApi.refreshToken();
     } catch {
       // Silent failure — the 401 interceptor handles actual session loss
     }
-  }, []);
+  }, [state.authMethod]);
 
   // ==========================================================================
   // Clear Error
@@ -521,6 +561,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
   // Proactive silent token refresh (every 30 min + on tab visibility change)
   useEffect(() => {
     if (state.status !== 'authenticated') return;
+    // Local Demo Mode has no JWT — skip refresh entirely
+    if (state.authMethod === 'local_demo') return;
 
     const doRefresh = () => {
       lastRefreshRef.current = Date.now();
@@ -546,7 +588,18 @@ export function AuthProvider({ children }: AuthProviderProps) {
       clearInterval(intervalId);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [state.status, refreshToken]);
+  }, [state.status, state.authMethod, refreshToken]);
+
+  // ==========================================================================
+  // Enter Local Demo Mode (DEV only)
+  // ==========================================================================
+
+  const enterLocalDemo = useCallback(async (): Promise<void> => {
+    // Production builds: hard no-op (DEV gate)
+    if (!isLocalDemoModeAllowed()) return;
+    enterLocalDemoMode();
+    await checkAuth({ force: true });
+  }, [checkAuth]);
 
   // ==========================================================================
   // Context Value
@@ -564,8 +617,19 @@ export function AuthProvider({ children }: AuthProviderProps) {
       refreshToken,
       clearError,
       hasRole,
+      enterLocalDemo,
     }),
-    [state, login, logout, checkAuth, refreshUser, refreshToken, clearError, hasRole]
+    [
+      state,
+      login,
+      logout,
+      checkAuth,
+      refreshUser,
+      refreshToken,
+      clearError,
+      hasRole,
+      enterLocalDemo,
+    ]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

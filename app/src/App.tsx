@@ -13,6 +13,7 @@ import { CommandProvider } from './contexts/CommandContext';
 import { FeatureFlagProvider } from './contexts/FeatureFlagContext';
 import { DashboardLayout } from './components/DashboardLayout';
 import { PrivateRoute, PublicOnlyRoute } from './components/RouteGuards';
+import { LocalDemoBanner } from './components/LocalDemoBanner';
 import { TitleBar } from './components/desktop/TitleBar';
 import Login from './pages/Login';
 import MagicLinkConsume from './pages/MagicLinkConsume';
@@ -527,6 +528,7 @@ function App() {
                           }}
                         >
                           {IS_TAURI && <TitleBar />}
+                          <LocalDemoBanner />
                           <div
                             style={{
                               flex: 1,

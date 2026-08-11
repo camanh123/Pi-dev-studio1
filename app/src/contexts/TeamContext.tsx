@@ -2,6 +2,18 @@ import { createContext, useContext, useState, useEffect, useCallback } from 'rea
 import { teamsApi } from '../lib/api';
 import type { TeamList } from '../lib/api';
 import { useAuth } from './AuthContext';
+import { isLocalDemoModeActive } from '../lib/localDemoMode';
+
+/** In-memory personal team for Local Demo Mode — no API calls. */
+const LOCAL_DEMO_TEAM: TeamList = {
+  id: 'local-demo-team',
+  name: 'Local Demo',
+  slug: 'local-demo',
+  avatar_url: null,
+  is_personal: true,
+  subscription_tier: 'free',
+  role: 'admin',
+};
 
 /** Client-side mirror of backend ROLE_PERMISSIONS for UX-only gating. */
 const ROLE_PERMISSIONS: Record<string, Set<string>> = {
@@ -55,6 +67,13 @@ export function TeamProvider({ children }: { children: React.ReactNode }) {
     if (!isAuthenticated) {
       setTeams([]);
       setActiveTeam(null);
+      setLoading(false);
+      return;
+    }
+    // Local Demo Mode: seed a personal team without hitting the API
+    if (isLocalDemoModeActive()) {
+      setTeams([LOCAL_DEMO_TEAM]);
+      setActiveTeam(LOCAL_DEMO_TEAM);
       setLoading(false);
       return;
     }
