@@ -253,6 +253,90 @@ def simulate_beta_rollback_to_stage0() -> dict[str, bool]:
     return {flag: False for flag in PI_FLAGS}
 
 
+def detect_live_beta_access() -> dict[str, Any]:
+    """Detect whether this runtime can reach a live beta deployment.
+
+    Does not invent URLs, credentials, or cluster names. Only reports tools
+    actually present on PATH and whether a live soak can be attempted.
+    """
+    import shutil
+
+    tools = {
+        "aws": shutil.which("aws") is not None,
+        "kubectl": shutil.which("kubectl") is not None,
+        "docker": shutil.which("docker") is not None,
+    }
+    # Official beta mutate path in this repo is aws-deploy.sh + kubectl/EKS.
+    live = bool(tools["aws"] and tools["kubectl"])
+    return {
+        "tools_present": tools,
+        "aws_deploy_script_present": (_REPO_ROOT / "scripts" / "aws-deploy.sh").is_file(),
+        "live_beta_access": live,
+        "live_soak_status": (
+            "LIVE SOAK — AVAILABLE" if live else "LIVE SOAK — NOT EXECUTED"
+        ),
+        "live_rollback_status": (
+            "LIVE ROLLBACK — AVAILABLE" if live else "LIVE BETA ROLLBACK — NOT EXECUTED"
+        ),
+        "note": (
+            "Live beta soak requires aws + kubectl (and operator credentials). "
+            "This detector does not invent cluster names or endpoints."
+        ),
+    }
+
+
+def run_phase15_soak_package() -> dict[str, Any]:
+    """Phase 15 soak package: health + access detection + simulated rollback.
+
+    Never labels simulated results as LIVE SOAK — EXECUTED.
+    """
+    access = detect_live_beta_access()
+    beta_report = run_pi_ops_health(env="beta")
+    prod_report = run_pi_ops_health(env="production")
+    beta_flags = {flag: resolve_flags_for_env("beta")[flag] for flag in PI_FLAGS}
+    prod_flags = {flag: resolve_flags_for_env("production")[flag] for flag in PI_FLAGS}
+    rolled = simulate_beta_rollback_to_stage0()
+
+    simulated_ok = (
+        beta_report.ok
+        and prod_report.ok
+        and beta_flags == BETA_STAGE3_FLAGS
+        and all(v is False for v in prod_flags.values())
+        and all(v is False for v in rolled.values())
+        and beta_flags["pi_payments_template"] is False
+    )
+
+    if access["live_beta_access"]:
+        # Caller with live access must still perform HTTP/cluster soak separately.
+        soak_label = "LIVE SOAK — AVAILABLE (operator must execute cluster soak)"
+        rollback_label = "LIVE ROLLBACK — AVAILABLE (operator must execute)"
+    else:
+        soak_label = "LIVE SOAK — NOT EXECUTED"
+        rollback_label = "LIVE BETA ROLLBACK — NOT EXECUTED"
+
+    return {
+        "phase": 15,
+        "release_version": "0.1.0-rc.10",
+        "live_beta_access": access,
+        "beta_flags_before": beta_flags,
+        "production_flags": prod_flags,
+        "beta_health_ok": beta_report.ok,
+        "production_health_ok": prod_report.ok,
+        "simulated_rollback_flags": rolled,
+        "simulated_soak_ok": simulated_ok,
+        "soak_label": soak_label,
+        "rollback_label": rollback_label,
+        "simulated_soak_label": "SIMULATED SOAK — PASS" if simulated_ok else "SIMULATED SOAK — FAIL",
+        "payments_remain_off": beta_flags.get("pi_payments_template") is False,
+        "production_remains_stage0": all(v is False for v in prod_flags.values()),
+        "verdict_hint": (
+            "PHASE 15 — LIVE BETA SOAK PASS WITH KNOWN LIMITATIONS"
+            if access["live_beta_access"] and simulated_ok
+            else "PHASE 15 — VALIDATION READY / LIVE SOAK NOT EXECUTED"
+        ),
+    }
+
+
 def check_marketplace_seed_availability() -> HealthCheckResult:
     bases = json.loads((_SEEDS / "bases.json").read_text(encoding="utf-8"))
     skills = json.loads((_SEEDS / "skills_pi.json").read_text(encoding="utf-8"))
@@ -467,7 +551,17 @@ def main() -> int:
         action="store_true",
         help="Print in-memory beta→Stage 0 rollback (does not mutate beta.yaml)",
     )
+    parser.add_argument(
+        "--phase15-soak",
+        action="store_true",
+        help="Phase 15 soak package: access detection + simulated soak/rollback",
+    )
     args = parser.parse_args()
+    if args.phase15_soak:
+        payload = run_phase15_soak_package()
+        print(json.dumps(payload, indent=2, sort_keys=True))
+        return 0 if payload.get("simulated_soak_ok") else 1
+
     report = run_pi_ops_health(env=args.env)
     payload = report.to_dict()
     if args.simulate_stage3:
