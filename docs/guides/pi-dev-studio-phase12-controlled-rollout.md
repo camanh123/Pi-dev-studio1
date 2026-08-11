@@ -17,7 +17,7 @@ Operator approval: none (no production promotion)
 ```text
 Release: 0.1.0-rc.10
 Branch: cursor/pi-controlled-rollout-a868
-Commit: (see git HEAD on PR)
+Commit: (set on PR HEAD)
 
 Stage 0: PASS
 Stage 1: PASS (validated; NOT ACTIVATED in production)
@@ -28,8 +28,10 @@ Stage 4: NOT ACTIVATED (security gate validated; requires separate operator appr
 Observability: PASS
 Rollback drill: PASS
 Security: PASS
-Regression: PASS
+Regression: PASS (Marketplace Pi 170; pi-integration 16; Frontend Pi UX 15; Phase 12 gate green)
 Documentation: PASS
+
+OpenSail note: full orchestrator pytest requires fastapi_users in this VM (environment/setup — not a Pi regression). Auth/billing routers present.
 
 Current production flag state:
 pi_knowledge = OFF
