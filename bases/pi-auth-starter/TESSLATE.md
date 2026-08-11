@@ -47,3 +47,4 @@ For payments later: `pi-payments` (Phase 5) — do not invent payment recovery h
 - Never add Server API Key routes in this starter.
 - Never invent OAuth2 / refresh-token / wallet APIs.
 - `uid` is app-scoped and can change after revocation.
+- Developer Portal Testnet/Mainnet selection is manual; SDK sandbox ≠ Portal network.
