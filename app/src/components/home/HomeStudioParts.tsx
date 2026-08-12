@@ -344,24 +344,25 @@ export function HomeIdentityCta({
   );
 }
 
-export type SystemStatusTone = 'ok' | 'warn' | 'off' | 'demo';
+/** Environment-agnostic status tones (demo/testnet/production all map here). */
+export type SystemStatusTone = 'ok' | 'warn' | 'off' | 'demo' | 'info' | 'pending';
 
 export function HomeSystemStatusPanel({
   title,
   footnote,
   items,
-  demoMode,
 }: {
   title?: string;
   footnote?: string;
-  items: Array<{ label: string; detail: string; tone: SystemStatusTone }>;
-  demoMode?: boolean;
+  items: Array<{ id?: string; label: string; detail: string; tone: SystemStatusTone }>;
 }) {
   const toneClass: Record<SystemStatusTone, string> = {
     ok: 'bg-[var(--status-success)]',
     warn: 'bg-[var(--status-warning,#c9a227)]',
     off: 'bg-[var(--text-subtle)]',
     demo: 'bg-[var(--accent-gold,#C9A227)]',
+    info: 'bg-[var(--primary)]',
+    pending: 'bg-[var(--status-warning,#c9a227)] animate-pulse',
   };
 
   return (
@@ -369,15 +370,12 @@ export function HomeSystemStatusPanel({
       <h2 className="text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">
         {title || 'System status'}
       </h2>
-      {(demoMode || footnote) && (
-        <p className="mt-1 text-[10px] leading-relaxed text-[var(--accent-gold,#C9A227)]">
-          {footnote ||
-            'Local Demo — statuses are informational, not live connectivity.'}
-        </p>
+      {footnote && (
+        <p className="mt-1 text-[10px] leading-relaxed text-[var(--text-muted)]">{footnote}</p>
       )}
       <ul className="mt-3 space-y-2.5">
         {items.map((item) => (
-          <li key={item.label} className="flex items-start gap-2.5">
+          <li key={item.id || item.label} className="flex items-start gap-2.5">
             <span
               className={`mt-1.5 h-2 w-2 flex-shrink-0 rounded-full ${toneClass[item.tone]}`}
               aria-hidden
@@ -389,6 +387,81 @@ export function HomeSystemStatusPanel({
           </li>
         ))}
       </ul>
+    </aside>
+  );
+}
+
+/**
+ * Presentational Pi balance / ledger panel.
+ * Renders DEMO | TESTNET | PRODUCTION labels from the view-model.
+ * Never executes payments — CTA is a plain navigation callback/href.
+ */
+export function HomePiBalancePanel({
+  ledgerEnvironment,
+  displayAmount,
+  currencySymbol,
+  title,
+  footnote,
+  ctaLabel,
+  ctaHref,
+  paymentsEnabled,
+  isPresentationData,
+  state,
+}: {
+  ledgerEnvironment: 'DEMO' | 'TESTNET' | 'PRODUCTION';
+  displayAmount: string | null;
+  currencySymbol: string;
+  title: string;
+  footnote: string;
+  ctaLabel: string;
+  ctaHref: string;
+  paymentsEnabled: boolean;
+  isPresentationData: boolean;
+  state: string;
+}) {
+  const envBadgeClass =
+    ledgerEnvironment === 'DEMO'
+      ? 'border-[color-mix(in_srgb,var(--accent-gold,#C9A227)_40%,var(--border))] text-[var(--accent-gold,#C9A227)]'
+      : ledgerEnvironment === 'TESTNET'
+        ? 'border-[color-mix(in_srgb,var(--primary)_40%,var(--border))] text-[var(--primary)]'
+        : 'border-[var(--border)] text-[var(--text-muted)]';
+
+  return (
+    <aside
+      className="rounded-2xl border border-[color-mix(in_srgb,var(--accent-gold,#C9A227)_28%,var(--border))] bg-[color-mix(in_srgb,var(--accent-gold,#C9A227)_8%,var(--surface))] p-4 sm:p-5"
+      data-ledger-env={ledgerEnvironment}
+      data-presentation={isPresentationData ? 'true' : 'false'}
+      data-payments-enabled={paymentsEnabled ? 'true' : 'false'}
+      data-state={state}
+    >
+      <div className="mb-2 flex items-center justify-between gap-2">
+        <p className="text-xs font-semibold text-[var(--text)]">{title}</p>
+        <span
+          className={`rounded-full border px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider ${envBadgeClass}`}
+        >
+          {ledgerEnvironment}
+        </span>
+      </div>
+      {displayAmount != null ? (
+        <p className="font-heading text-2xl font-semibold tabular-nums text-[var(--accent-gold,#C9A227)]">
+          {displayAmount}{' '}
+          <span className="text-base font-medium">{currencySymbol}</span>
+        </p>
+      ) : (
+        <p className="text-sm text-[var(--text-muted)]">Balance unavailable</p>
+      )}
+      <p className="mt-2 text-[11px] leading-relaxed text-[var(--text-muted)]">{footnote}</p>
+      {!paymentsEnabled && (
+        <p className="mt-1 text-[10px] font-medium uppercase tracking-wide text-[var(--text-subtle)]">
+          Payments disabled
+        </p>
+      )}
+      <Link
+        to={ctaHref}
+        className="mt-3 inline-flex text-xs font-semibold text-[var(--primary)] hover:underline focus-visible:outline-none focus-visible:underline"
+      >
+        {ctaLabel}
+      </Link>
     </aside>
   );
 }

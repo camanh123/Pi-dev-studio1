@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import {
@@ -7,7 +7,6 @@ import {
   SquaresFour,
   Folder,
   FolderOpen,
-  Plus,
   Package,
   Storefront,
   Robot,
@@ -15,16 +14,11 @@ import {
 } from '@phosphor-icons/react';
 import { MoodyFace } from '../components/ui/MoodyFace';
 import { CreateProjectModal, RepoImportModal } from '../components/modals';
-import { projectsApi, tasksApi, marketplaceApi } from '../lib/api';
-import { useTeam } from '../contexts/TeamContext';
-import { useAuth } from '../contexts/AuthContext';
+import { projectsApi, tasksApi } from '../lib/api';
 import { useTheme } from '../theme/ThemeContext';
-import { isLocalDemoModeActive } from '../lib/localDemoMode';
-import {
-  PRODUCT_HERO,
-  PRODUCT_HERO_SUPPORT,
-  PRODUCT_NAME,
-} from '../lib/branding';
+import { PRODUCT_HERO, PRODUCT_NAME } from '../lib/branding';
+import { useHomeDashboard } from '../home/useHomeDashboard';
+import type { HomeResourceState } from '../home/types';
 import {
   HomeTopBar,
   HomeHero,
@@ -34,28 +28,8 @@ import {
   HomeIdentityCta,
   HomeSystemStatusPanel,
   HomeSectionLink,
+  HomePiBalancePanel,
 } from '../components/home/HomeStudioParts';
-
-type RecentProject = {
-  id: string;
-  name: string;
-  slug: string;
-  updatedAt: string;
-};
-
-type AgentRow = {
-  id: string;
-  name: string;
-  description?: string | null;
-  icon?: string | null;
-};
-
-type PreviewItem = {
-  id: string;
-  name: string;
-  description?: string | null;
-  kind: 'template' | 'skill' | 'agent';
-};
 
 const RELATIVE_UNITS: Array<[Intl.RelativeTimeFormatUnit, number]> = [
   ['year', 60 * 60 * 24 * 365],
@@ -81,167 +55,76 @@ function formatRelativeTime(iso: string): string {
   return '';
 }
 
-function unwrapList(data: unknown): Array<Record<string, unknown>> {
-  if (Array.isArray(data)) return data as Array<Record<string, unknown>>;
-  if (data && typeof data === 'object') {
-    const obj = data as Record<string, unknown>;
-    for (const key of ['items', 'agents', 'bases', 'skills', 'results', 'data']) {
-      if (Array.isArray(obj[key])) return obj[key] as Array<Record<string, unknown>>;
-    }
+function agentStatusClass(state: HomeResourceState): string {
+  if (state === 'connected' || state === 'success') {
+    return 'border-[color-mix(in_srgb,var(--status-success)_35%,var(--border))] bg-[color-mix(in_srgb,var(--status-success)_12%,transparent)] text-[var(--status-success)]';
   }
-  return [];
+  if (state === 'pending' || state === 'loading') {
+    return 'border-[color-mix(in_srgb,var(--status-warning,#c9a227)_35%,var(--border))] bg-[color-mix(in_srgb,var(--status-warning,#c9a227)_12%,transparent)] text-[var(--status-warning,#c9a227)]';
+  }
+  return 'border-[var(--border)] bg-[var(--surface)] text-[var(--text-muted)]';
+}
+
+function listEmptyCopy(
+  state: HomeResourceState,
+  kind: 'projects' | 'agents' | 'marketplace',
+  errorMessage?: string,
+): { title: string; description: string } {
+  if (state === 'simulated') {
+    return {
+      title: `No ${kind} presentation data`,
+      description: 'Presentation catalog is empty for this slice.',
+    };
+  }
+  if (state === 'failed') {
+    return {
+      title: `Could not load ${kind}`,
+      description: errorMessage || 'The data source returned an error.',
+    };
+  }
+  if (state === 'unavailable') {
+    return {
+      title: `${kind[0].toUpperCase()}${kind.slice(1)} unavailable`,
+      description: errorMessage || 'This feed is not wired for the current data environment.',
+    };
+  }
+  if (kind === 'projects') {
+    return {
+      title: 'No workspaces yet',
+      description: 'Create a workspace to start building with AI for the Pi ecosystem.',
+    };
+  }
+  if (kind === 'agents') {
+    return {
+      title: 'No agents yet',
+      description: 'Add agents from the Marketplace or create one with @agent-builder.',
+    };
+  }
+  return {
+    title: 'No marketplace preview',
+    description: 'Catalog is empty or the API did not respond.',
+  };
 }
 
 export default function Home() {
   const navigate = useNavigate();
-  const { activeTeam, teamSwitchKey } = useTeam();
-  const { user, authMethod } = useAuth();
   const { theme, toggleTheme } = useTheme();
-  const demo = authMethod === 'local_demo' || isLocalDemoModeActive();
-
-  const greetingName = (user?.name?.split(' ')[0] || user?.username || user?.name || 'there').trim();
-
-  const [recent, setRecent] = useState<RecentProject[]>([]);
-  const [recentLoading, setRecentLoading] = useState(true);
-  const [recentFailed, setRecentFailed] = useState(false);
-
-  const [agents, setAgents] = useState<AgentRow[]>([]);
-  const [agentsLoading, setAgentsLoading] = useState(true);
-  const [agentsFailed, setAgentsFailed] = useState(false);
-
-  const [previewItems, setPreviewItems] = useState<PreviewItem[]>([]);
-  const [previewLoading, setPreviewLoading] = useState(true);
+  const { viewModel } = useHomeDashboard();
 
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showImportDialog, setShowImportDialog] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
 
-  const subscriptionTier = activeTeam?.subscription_tier || 'free';
-  const tierLabel = useMemo(
-    () => subscriptionTier.charAt(0).toUpperCase() + subscriptionTier.slice(1),
-    [subscriptionTier],
-  );
-  const isPaidPlan = subscriptionTier !== 'free';
-
-  useEffect(() => {
-    let cancelled = false;
-    setRecentLoading(true);
-    setRecentFailed(false);
-    projectsApi
-      .getAll(activeTeam?.slug)
-      .then((data: unknown) => {
-        if (cancelled) return;
-        const list = (Array.isArray(data) ? data : []) as Array<Record<string, unknown>>;
-        const mapped: RecentProject[] = list
-          .map((p) => ({
-            id: (p.id as string) || '',
-            name: (p.name as string) || 'Untitled workspace',
-            slug: (p.slug as string) || '',
-            updatedAt:
-              (p.updated_at as string) || (p.created_at as string) || new Date(0).toISOString(),
-          }))
-          .filter((p) => p.slug)
-          .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
-          .slice(0, 6);
-        setRecent(mapped);
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setRecent([]);
-          setRecentFailed(true);
-        }
-      })
-      .finally(() => {
-        if (!cancelled) setRecentLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [activeTeam?.slug, teamSwitchKey]);
-
-  useEffect(() => {
-    let cancelled = false;
-    setAgentsLoading(true);
-    setAgentsFailed(false);
-    marketplaceApi
-      .getMyAgents()
-      .then((data: unknown) => {
-        if (cancelled) return;
-        const list = unwrapList(data);
-        setAgents(
-          list.slice(0, 6).map((a) => ({
-            id: String(a.id ?? a.slug ?? ''),
-            name: String(a.name ?? 'Agent'),
-            description: (a.description as string) || null,
-            icon: (a.icon as string) || (a.avatar_url as string) || null,
-          })),
-        );
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setAgents([]);
-          setAgentsFailed(true);
-        }
-      })
-      .finally(() => {
-        if (!cancelled) setAgentsLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  useEffect(() => {
-    let cancelled = false;
-    setPreviewLoading(true);
-    Promise.all([
-      marketplaceApi.getAllBases({ limit: 2, sort: 'popular' }).catch(() => null),
-      marketplaceApi.getAllSkills({ limit: 1, sort: 'popular' }).catch(() => null),
-      marketplaceApi.getAllAgents({ limit: 1, sort: 'popular' }).catch(() => null),
-    ])
-      .then(([bases, skills, agentsList]) => {
-        if (cancelled) return;
-        const items: PreviewItem[] = [
-          ...unwrapList(bases)
-            .slice(0, 2)
-            .map((b) => ({
-              id: String(b.id ?? b.slug ?? ''),
-              name: String(b.name ?? 'Template'),
-              description: (b.description as string) || null,
-              kind: 'template' as const,
-            })),
-          ...unwrapList(skills)
-            .slice(0, 1)
-            .map((s) => ({
-              id: String(s.id ?? s.slug ?? ''),
-              name: String(s.name ?? 'Skill'),
-              description: (s.description as string) || null,
-              kind: 'skill' as const,
-            })),
-          ...unwrapList(agentsList)
-            .slice(0, 1)
-            .map((a) => ({
-              id: String(a.id ?? a.slug ?? ''),
-              name: String(a.name ?? 'Agent'),
-              description: (a.description as string) || null,
-              kind: 'agent' as const,
-            })),
-        ].filter((i) => i.id);
-        setPreviewItems(items.slice(0, 4));
-      })
-      .finally(() => {
-        if (!cancelled) setPreviewLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  const canMutate = viewModel.capabilities.canMutateBackend;
+  const showBadges = viewModel.capabilities.showPresentationBadges;
 
   const handleCreateProject = useCallback(
     async (projectName: string, baseId?: string, baseVersion?: string) => {
       if (isCreating) return;
-      if (demo) {
-        toast.error('Local Demo Mode is UI-only — workspace creation requires a backend.');
+      if (!canMutate) {
+        toast.error(
+          `${viewModel.environment === 'demo' ? 'Local Demo' : 'Current'} mode is presentation-only — workspace creation requires a live backend.`,
+        );
         return;
       }
       setIsCreating(true);
@@ -286,14 +169,16 @@ export default function Home() {
         setIsCreating(false);
       }
     },
-    [isCreating, navigate, demo],
+    [isCreating, navigate, canMutate, viewModel.environment],
   );
 
   const handleImportRepo = useCallback(
     async (provider: string, repoUrl: string, branch: string, projectName: string) => {
       if (isCreating) return;
-      if (demo) {
-        toast.error('Local Demo Mode is UI-only — importing requires a backend.');
+      if (!canMutate) {
+        toast.error(
+          `${viewModel.environment === 'demo' ? 'Local Demo' : 'Current'} mode is presentation-only — importing requires a live backend.`,
+        );
         return;
       }
       setIsCreating(true);
@@ -337,52 +222,44 @@ export default function Home() {
         setIsCreating(false);
       }
     },
-    [isCreating, navigate, demo],
+    [isCreating, navigate, canMutate, viewModel.environment],
   );
 
   const handleUpgrade = () => navigate('/settings/team/billing');
-  const handleOpenProject = (slug: string) => navigate(`/project/${slug}`);
+  const handleOpenProject = (slug: string, isPresentation?: boolean) => {
+    if (isPresentation) {
+      toast('Presentation workspace — open Workspaces to create a real project.', { icon: 'ℹ️' });
+      return;
+    }
+    navigate(`/project/${slug}`);
+  };
 
   const openCommandPalette = () => {
     window.dispatchEvent(new CustomEvent('tesslate-open-command-palette'));
   };
 
-  const statusItems = demo
-    ? [
-        { label: 'Local Demo', detail: 'UI preview only · DEV', tone: 'demo' as const },
-        { label: 'AI / Backend', detail: 'Not connected', tone: 'off' as const },
-        { label: 'Pi Network', detail: 'No Pi authentication', tone: 'off' as const },
-        { label: 'Database', detail: 'API unused in demo', tone: 'off' as const },
-      ]
-    : [
-        {
-          label: 'Session',
-          detail: user ? 'Signed in' : 'Signed out',
-          tone: (user ? 'ok' : 'off') as 'ok' | 'off',
-        },
-        {
-          label: 'Workspaces API',
-          detail: recentFailed ? 'Unavailable' : recentLoading ? 'Checking…' : 'Responded',
-          tone: (recentFailed ? 'warn' : recentLoading ? 'off' : 'ok') as 'ok' | 'warn' | 'off',
-        },
-        {
-          label: 'My Agents API',
-          detail: agentsFailed ? 'Unavailable' : agentsLoading ? 'Checking…' : 'Responded',
-          tone: (agentsFailed ? 'warn' : agentsLoading ? 'off' : 'ok') as 'ok' | 'warn' | 'off',
-        },
-        {
-          label: PRODUCT_NAME,
-          detail: PRODUCT_HERO,
-          tone: 'ok' as const,
-        },
-      ];
+  const projectsCopy = listEmptyCopy(
+    viewModel.projects.state,
+    'projects',
+    viewModel.projects.errorMessage,
+  );
+  const agentsCopy = listEmptyCopy(
+    viewModel.agents.state,
+    'agents',
+    viewModel.agents.errorMessage,
+  );
+  const marketplaceCopy = listEmptyCopy(
+    viewModel.marketplace.state,
+    'marketplace',
+    viewModel.marketplace.errorMessage,
+  );
 
   return (
     <div className="h-full w-full overflow-y-auto studio-app-bg">
       <div className="mx-auto flex min-h-full w-full max-w-[1440px] flex-col gap-8 px-4 py-6 sm:gap-10 sm:px-6 sm:py-8 lg:px-8">
         <HomeTopBar
-          userName={user?.name || user?.username || 'User'}
-          userSubtitle={demo ? 'Local Demo' : activeTeam?.name || PRODUCT_NAME}
+          userName={viewModel.userDisplayName}
+          userSubtitle={viewModel.userSubtitle}
           theme={theme}
           searchPlaceholder="Search commands, workspaces, apps…"
           onToggleTheme={toggleTheme}
@@ -391,12 +268,8 @@ export default function Home() {
         />
 
         <HomeHero
-          greeting={`Welcome back, ${greetingName}`}
-          subtitle={
-            demo
-              ? `${PRODUCT_HERO_SUPPORT} Local Demo is UI-only — no backend or Pi auth.`
-              : `${PRODUCT_HERO_SUPPORT} Start from a workspace, agent, or the Marketplace.`
-          }
+          greeting={`Welcome back, ${viewModel.greetingName}`}
+          subtitle={viewModel.heroSubtitle}
           primaryCta={{
             label: 'New Workspace',
             onClick: () => setShowCreateDialog(true),
@@ -407,8 +280,8 @@ export default function Home() {
           }}
           planLine={
             <p className="w-full text-xs text-[var(--text-muted)] sm:w-auto sm:ml-1">
-              <span>{tierLabel} Plan</span>
-              {!isPaidPlan && !demo && (
+              <span>{viewModel.planLabel} Plan</span>
+              {viewModel.showUpgrade && (
                 <>
                   <span aria-hidden="true"> · </span>
                   <button
@@ -420,10 +293,12 @@ export default function Home() {
                   </button>
                 </>
               )}
-              {demo && (
+              {viewModel.environment !== 'production' && (
                 <>
                   <span aria-hidden="true"> · </span>
-                  <span className="text-[var(--accent-gold,#C9A227)]">Demo</span>
+                  <span className="text-[var(--accent-gold,#C9A227)] uppercase tracking-wide text-[10px] font-semibold">
+                    {viewModel.environment}
+                  </span>
                 </>
               )}
             </p>
@@ -442,7 +317,7 @@ export default function Home() {
               title="New Workspace"
               description="Create a project from a template"
               onClick={() => setShowCreateDialog(true)}
-              badge={demo ? 'Demo' : undefined}
+              badge={!canMutate ? 'Demo' : undefined}
             />
             <HomeQuickAction
               icon={<Sparkle size={20} weight="duotone" />}
@@ -463,7 +338,7 @@ export default function Home() {
               title="Import Project"
               description="Clone from GitHub, GitLab, or Bitbucket"
               onClick={() => setShowImportDialog(true)}
-              badge={demo ? 'Demo' : undefined}
+              badge={!canMutate ? 'Demo' : undefined}
             />
             <HomeQuickAction
               icon={<Storefront size={20} weight="duotone" />}
@@ -508,10 +383,14 @@ export default function Home() {
               <HomeSectionHeader
                 id="home-recent-projects"
                 title="Recent projects"
-                subtitle="Workspaces from the projects API when available"
+                subtitle={
+                  showBadges
+                    ? 'Presentation catalog (demo:) — swap source for Testnet/Production later'
+                    : 'Workspaces from the active data source'
+                }
                 action={<HomeSectionLink to="/dashboard">View all</HomeSectionLink>}
               />
-              {recentLoading ? (
+              {viewModel.projects.state === 'loading' ? (
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   {[0, 1, 2, 3].map((i) => (
                     <div
@@ -520,26 +399,43 @@ export default function Home() {
                     />
                   ))}
                 </div>
-              ) : recent.length > 0 ? (
+              ) : viewModel.projects.items.length > 0 ? (
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                  {recent.map((p) => (
+                  {viewModel.projects.items.map((p) => (
                     <button
                       key={p.id}
                       type="button"
-                      onClick={() => handleOpenProject(p.slug)}
-                      className="group flex items-start gap-3 rounded-2xl border border-[var(--border)] bg-[var(--surface)]/80 p-4 text-left transition hover:border-[color-mix(in_srgb,var(--primary)_40%,var(--border))] hover:shadow-[0_0_28px_-16px_rgba(124,58,237,0.55)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)]"
+                      onClick={() => handleOpenProject(p.slug, p.isPresentationData)}
+                      className="group relative flex items-start gap-3 rounded-2xl border border-[var(--border)] bg-[var(--surface)]/80 p-4 text-left transition hover:border-[color-mix(in_srgb,var(--primary)_40%,var(--border))] hover:shadow-[0_0_28px_-16px_rgba(124,58,237,0.55)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)]"
+                      data-presentation={p.isPresentationData ? 'true' : 'false'}
                     >
+                      {p.isPresentationData && (
+                        <span className="absolute right-3 top-3 rounded-full border border-[color-mix(in_srgb,var(--accent-gold,#C9A227)_40%,var(--border))] px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-[var(--accent-gold,#C9A227)]">
+                          Demo
+                        </span>
+                      )}
                       <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--primary)]/14 text-[var(--primary)]">
                         <Folder size={20} weight="duotone" />
                       </span>
-                      <span className="min-w-0 flex-1">
+                      <span className="min-w-0 flex-1 pr-10">
                         <span className="block truncate text-sm font-semibold text-[var(--text)] group-hover:text-[var(--primary)]">
                           {p.name}
                         </span>
                         <span className="mt-0.5 block truncate text-[11px] text-[var(--text-muted)]">
-                          {activeTeam?.slug ? `${activeTeam.slug}/` : ''}
                           {p.slug}
                         </span>
+                        {p.stackLabels && p.stackLabels.length > 0 && (
+                          <span className="mt-1 flex flex-wrap gap-1">
+                            {p.stackLabels.map((label) => (
+                              <span
+                                key={label}
+                                className="rounded-md border border-[var(--border)] px-1.5 py-0.5 text-[9px] text-[var(--text-muted)]"
+                              >
+                                {label}
+                              </span>
+                            ))}
+                          </span>
+                        )}
                         <span
                           className="mt-2 block text-[10px] uppercase tracking-wide text-[var(--text-subtle)]"
                           title={new Date(p.updatedAt).toLocaleString()}
@@ -553,14 +449,8 @@ export default function Home() {
               ) : (
                 <HomeEmptyState
                   icon={<FolderOpen size={20} />}
-                  title={demo || recentFailed ? 'No workspace data' : 'No workspaces yet'}
-                  description={
-                    demo
-                      ? 'Local Demo does not call the backend — an empty list is expected.'
-                      : recentFailed
-                        ? 'Could not load projects from the API.'
-                        : 'Create a workspace to start building with AI for the Pi ecosystem.'
-                  }
+                  title={projectsCopy.title}
+                  description={projectsCopy.description}
                   actionLabel="New Workspace"
                   onAction={() => setShowCreateDialog(true)}
                 />
@@ -571,10 +461,14 @@ export default function Home() {
               <HomeSectionHeader
                 id="home-agents"
                 title="My Agents"
-                subtitle="Agents linked to your account when the API returns data"
+                subtitle={
+                  showBadges
+                    ? 'Presentation agents for UI state coverage'
+                    : 'Agents from the active data source'
+                }
                 action={<HomeSectionLink to="/chat">Open Agents</HomeSectionLink>}
               />
-              {agentsLoading ? (
+              {viewModel.agents.state === 'loading' ? (
                 <div className="space-y-2">
                   {[0, 1, 2].map((i) => (
                     <div
@@ -583,14 +477,15 @@ export default function Home() {
                     />
                   ))}
                 </div>
-              ) : agents.length > 0 ? (
+              ) : viewModel.agents.items.length > 0 ? (
                 <ul className="space-y-2">
-                  {agents.map((agent) => (
+                  {viewModel.agents.items.map((agent) => (
                     <li key={agent.id}>
                       <button
                         type="button"
                         onClick={() => navigate('/chat')}
-                        className="flex w-full items-center gap-3 rounded-2xl border border-[var(--border)] bg-[var(--surface)]/80 px-4 py-3 text-left transition hover:border-[color-mix(in_srgb,var(--primary)_35%,var(--border))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)]"
+                        className="relative flex w-full items-center gap-3 rounded-2xl border border-[var(--border)] bg-[var(--surface)]/80 px-4 py-3 text-left transition hover:border-[color-mix(in_srgb,var(--primary)_35%,var(--border))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)]"
+                        data-presentation={agent.isPresentationData ? 'true' : 'false'}
                       >
                         <span className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-[var(--primary)]/12 text-lg">
                           {agent.icon && String(agent.icon).startsWith('http') ? (
@@ -602,13 +497,20 @@ export default function Home() {
                         <span className="min-w-0 flex-1">
                           <span className="block truncate text-sm font-semibold text-[var(--text)]">
                             {agent.name}
+                            {agent.isPresentationData && (
+                              <span className="ml-2 text-[9px] font-bold uppercase tracking-wide text-[var(--accent-gold,#C9A227)]">
+                                Demo
+                              </span>
+                            )}
                           </span>
                           <span className="block truncate text-xs text-[var(--text-muted)]">
                             {agent.description || 'Marketplace agent'}
                           </span>
                         </span>
-                        <span className="shrink-0 rounded-full border border-[color-mix(in_srgb,var(--status-success)_35%,var(--border))] bg-[color-mix(in_srgb,var(--status-success)_12%,transparent)] px-2 py-0.5 text-[10px] font-semibold text-[var(--status-success)]">
-                          Ready
+                        <span
+                          className={`shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-semibold ${agentStatusClass(agent.statusState)}`}
+                        >
+                          {agent.statusLabel}
                         </span>
                       </button>
                     </li>
@@ -617,14 +519,8 @@ export default function Home() {
               ) : (
                 <HomeEmptyState
                   icon={<Robot size={20} />}
-                  title={demo || agentsFailed ? 'No agent data' : 'No agents yet'}
-                  description={
-                    demo
-                      ? 'Local Demo does not load agents from the backend.'
-                      : agentsFailed
-                        ? 'Agents API did not respond.'
-                        : 'Add agents from the Marketplace or create one with @agent-builder.'
-                  }
+                  title={agentsCopy.title}
+                  description={agentsCopy.description}
                   actionLabel="Browse Agents"
                   actionTo="/marketplace?type=agent"
                 />
@@ -635,10 +531,14 @@ export default function Home() {
               <HomeSectionHeader
                 id="home-marketplace"
                 title="Explore Marketplace"
-                subtitle="Preview from catalog APIs (templates / skills / agents)"
+                subtitle={
+                  showBadges
+                    ? 'Presentation marketplace cards (not live catalog)'
+                    : 'Preview from the active catalog source'
+                }
                 action={<HomeSectionLink to="/marketplace">Marketplace</HomeSectionLink>}
               />
-              {previewLoading ? (
+              {viewModel.marketplace.state === 'loading' ? (
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
                   {[0, 1, 2, 3].map((i) => (
                     <div
@@ -647,20 +547,20 @@ export default function Home() {
                     />
                   ))}
                 </div>
-              ) : previewItems.length > 0 ? (
+              ) : viewModel.marketplace.items.length > 0 ? (
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                  {previewItems.map((item) => (
+                  {viewModel.marketplace.items.map((item) => (
                     <Link
                       key={`${item.kind}-${item.id}`}
-                      to={
-                        item.kind === 'template'
-                          ? '/marketplace?type=base'
-                          : item.kind === 'skill'
-                            ? '/marketplace?type=skill'
-                            : '/marketplace?type=agent'
-                      }
-                      className="group rounded-2xl border border-[var(--border)] bg-[var(--surface)]/80 p-4 transition hover:-translate-y-0.5 hover:border-[color-mix(in_srgb,var(--primary)_40%,var(--border))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)]"
+                      to={item.href}
+                      className="group relative rounded-2xl border border-[var(--border)] bg-[var(--surface)]/80 p-4 transition hover:-translate-y-0.5 hover:border-[color-mix(in_srgb,var(--primary)_40%,var(--border))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)]"
+                      data-presentation={item.isPresentationData ? 'true' : 'false'}
                     >
+                      {item.isPresentationData && (
+                        <span className="absolute right-3 top-3 rounded-full border border-[color-mix(in_srgb,var(--accent-gold,#C9A227)_40%,var(--border))] px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-[var(--accent-gold,#C9A227)]">
+                          Demo
+                        </span>
+                      )}
                       <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--primary)]/14 text-[var(--primary)]">
                         {item.kind === 'agent' ? (
                           <Robot size={20} />
@@ -679,18 +579,19 @@ export default function Home() {
                       <p className="mt-1 line-clamp-2 text-xs text-[var(--text-muted)]">
                         {item.description || '—'}
                       </p>
+                      {item.ratingLabel && (
+                        <p className="mt-2 text-[10px] text-[var(--accent-gold,#C9A227)]">
+                          {item.ratingLabel}
+                        </p>
+                      )}
                     </Link>
                   ))}
                 </div>
               ) : (
                 <HomeEmptyState
                   icon={<Storefront size={20} />}
-                  title="No marketplace preview"
-                  description={
-                    demo
-                      ? 'Local Demo does not load the catalog — open Marketplace to explore the UI.'
-                      : 'Catalog is empty or the API did not respond.'
-                  }
+                  title={marketplaceCopy.title}
+                  description={marketplaceCopy.description}
                   actionLabel="Open Marketplace"
                   actionTo="/marketplace"
                 />
@@ -701,14 +602,16 @@ export default function Home() {
           <aside className="min-w-0 space-y-6 xl:col-span-4">
             <HomeSystemStatusPanel
               title="System status"
-              demoMode={demo}
-              footnote={
-                demo
-                  ? 'Status reflects Local Demo — not production health.'
-                  : 'Based on session and recent API responses on this page — not infrastructure monitoring.'
-              }
-              items={statusItems}
+              footnote={viewModel.systemStatusFootnote}
+              items={viewModel.systemStatus.map((s) => ({
+                id: s.id,
+                label: s.label,
+                detail: s.detail,
+                tone: s.tone,
+              }))}
             />
+
+            <HomePiBalancePanel {...viewModel.piBalance} />
 
             <section
               aria-labelledby="home-activity"
@@ -721,19 +624,37 @@ export default function Home() {
                 Recent activity
               </h2>
               <p className="mt-1 mb-4 text-[11px] text-[var(--text-subtle)]">
-                {demo
-                  ? 'No activity feed in Local Demo.'
-                  : 'Summary from workspaces loaded on this page.'}
+                {showBadges
+                  ? 'Presentation activity timeline (demo data).'
+                  : 'Summary from the active data source.'}
               </p>
-              {!demo && recent.length > 0 ? (
+              {viewModel.activity.state === 'loading' ? (
+                <div className="space-y-2">
+                  {[0, 1, 2].map((i) => (
+                    <div key={i} className="h-8 animate-pulse rounded-lg bg-[var(--surface)]" />
+                  ))}
+                </div>
+              ) : viewModel.activity.items.length > 0 ? (
                 <ul className="space-y-3">
-                  {recent.slice(0, 5).map((p) => (
-                    <li key={`act-${p.id}`} className="flex gap-3">
+                  {viewModel.activity.items.map((item) => (
+                    <li key={item.id} className="flex gap-3">
                       <div className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-[var(--primary)]" />
                       <div className="min-w-0">
-                        <p className="truncate text-xs text-[var(--text)]">Workspace: {p.name}</p>
+                        <p className="truncate text-xs text-[var(--text)]">
+                          {item.title}
+                          {item.isPresentationData && (
+                            <span className="ml-1 text-[9px] font-bold uppercase text-[var(--accent-gold,#C9A227)]">
+                              Demo
+                            </span>
+                          )}
+                        </p>
+                        {item.detail && (
+                          <p className="truncate text-[10px] text-[var(--text-muted)]">
+                            {item.detail}
+                          </p>
+                        )}
                         <p className="text-[10px] text-[var(--text-muted)]">
-                          {formatRelativeTime(p.updatedAt) || '—'}
+                          {formatRelativeTime(item.at) || '—'}
                         </p>
                       </div>
                     </li>
@@ -741,22 +662,21 @@ export default function Home() {
                 </ul>
               ) : (
                 <p className="text-xs leading-relaxed text-[var(--text-muted)]">
-                  {demo
-                    ? 'Demo does not invent an activity timeline.'
+                  {viewModel.activity.state === 'unavailable'
+                    ? 'Activity feed unavailable for this environment.'
                     : 'Nothing to show yet.'}
                 </p>
               )}
             </section>
 
-            <div className="rounded-2xl border border-[color-mix(in_srgb,var(--accent-gold,#C9A227)_28%,var(--border))] bg-[color-mix(in_srgb,var(--accent-gold,#C9A227)_8%,var(--surface))] p-4">
-              <div className="mb-2 flex items-center gap-2">
-                <Plus size={14} className="text-[var(--accent-gold,#C9A227)]" weight="bold" />
-                <p className="text-xs font-semibold text-[var(--text)]">{PRODUCT_NAME}</p>
-              </div>
+            <div className="rounded-2xl border border-[var(--border)] studio-surface p-4">
+              <p className="text-xs font-semibold text-[var(--text)] mb-1">{PRODUCT_NAME}</p>
               <p className="mb-3 text-[11px] leading-relaxed text-[var(--text-muted)]">
-                {demo
-                  ? 'Upgrades and Pi wallet belong to production flows — not activated in Local Demo.'
-                  : 'Manage team billing and preferences from Settings when you are ready.'}
+                Data environment:{' '}
+                <span className="font-semibold uppercase text-[var(--accent-gold,#C9A227)]">
+                  {viewModel.environment}
+                </span>
+                . Swap the Home data source later for Pi Testnet without redesigning this UI.
               </p>
               <Link
                 to="/settings"
