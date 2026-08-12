@@ -5,8 +5,6 @@
  * - `isPresentationData: true`
  * - ids prefixed with `demo:`
  * - no JWTs, Pi access tokens, or payment credentials
- *
- * Rich enough to exercise UI states later mirrored by Pi Testnet data.
  */
 
 import type {
@@ -33,32 +31,48 @@ export const DEMO_HOME_PROJECTS: HomeProjectItem[] = [
     id: `${DEMO_PREFIX}project-ecommerce`,
     name: 'Pi E-commerce',
     slug: 'pi-ecommerce-demo',
+    description: 'Storefront + catalog workspace for Pi ecosystem demos',
+    projectType: 'Workspace',
+    statusLabel: 'Active',
     updatedAt: minutesAgo(12),
-    stackLabels: ['Next.js', 'React'],
+    stackLabels: ['Next.js', 'React', 'TypeScript'],
+    collaboratorInitials: ['HA', 'MT', 'LK'],
     isPresentationData: true,
   },
   {
     id: `${DEMO_PREFIX}project-social`,
     name: 'Social Dashboard',
     slug: 'social-dashboard-demo',
+    description: 'Analytics shell with agent-assisted chart flows',
+    projectType: 'App',
+    statusLabel: 'Active',
     updatedAt: hoursAgo(5),
     stackLabels: ['Vite', 'React'],
+    collaboratorInitials: ['HA', 'QN'],
     isPresentationData: true,
   },
   {
     id: `${DEMO_PREFIX}project-wallet`,
     name: 'Wallet Explorer UI',
     slug: 'wallet-explorer-demo',
+    description: 'Presentation UI for DEMO / TESTNET / PRODUCTION ledgers',
+    projectType: 'Template',
+    statusLabel: 'Idle',
     updatedAt: hoursAgo(28),
     stackLabels: ['SvelteKit'],
+    collaboratorInitials: ['HA'],
     isPresentationData: true,
   },
   {
     id: `${DEMO_PREFIX}project-agent`,
     name: 'Agent Ops Console',
     slug: 'agent-ops-demo',
+    description: 'Operator console for multi-agent run oversight',
+    projectType: 'Workspace',
+    statusLabel: 'Active',
     updatedAt: hoursAgo(50),
-    stackLabels: ['Vue.js'],
+    stackLabels: ['Vue.js', 'Pinia'],
+    collaboratorInitials: ['MT', 'HA', 'VR', 'PL'],
     isPresentationData: true,
   },
 ];
@@ -69,8 +83,9 @@ export const DEMO_HOME_AGENTS: HomeAgentItem[] = [
     name: 'Code Assistant',
     description: 'Refactors and explains project code in context',
     icon: '🤖',
-    statusLabel: 'Running',
+    statusLabel: 'RUNNING',
     statusState: 'connected',
+    lastActivityLabel: '2 phút trước',
     isPresentationData: true,
   },
   {
@@ -78,8 +93,9 @@ export const DEMO_HOME_AGENTS: HomeAgentItem[] = [
     name: 'UI/UX Designer',
     description: 'Suggests layout and accessibility improvements',
     icon: '🎨',
-    statusLabel: 'Ready',
+    statusLabel: 'READY',
     statusState: 'success',
+    lastActivityLabel: '1 giờ trước',
     isPresentationData: true,
   },
   {
@@ -87,8 +103,9 @@ export const DEMO_HOME_AGENTS: HomeAgentItem[] = [
     name: 'QA Reviewer',
     description: 'Pending review queue for PR-style diffs',
     icon: '🧪',
-    statusLabel: 'Pending',
+    statusLabel: 'DEMO',
     statusState: 'pending',
+    lastActivityLabel: 'Hôm qua',
     isPresentationData: true,
   },
 ];
@@ -99,8 +116,9 @@ export const DEMO_HOME_MARKETPLACE: HomeMarketplaceItem[] = [
     name: 'Pi Auth Starter',
     description: 'UI scaffolding for Pi-aware login flows (presentation only)',
     kind: 'template',
+    categoryLabel: 'Auth',
     href: '/marketplace?type=base',
-    ratingLabel: '4.9 · demo',
+    ratingLabel: '★ 4.9 · demo',
     isPresentationData: true,
   },
   {
@@ -108,8 +126,9 @@ export const DEMO_HOME_MARKETPLACE: HomeMarketplaceItem[] = [
     name: 'Payments Starter',
     description: 'Layout patterns for DEMO / TESTNET / PRODUCTION ledgers',
     kind: 'template',
+    categoryLabel: 'Payments',
     href: '/marketplace?type=base',
-    ratingLabel: '4.8 · demo',
+    ratingLabel: '★ 4.8 · demo',
     isPresentationData: true,
   },
   {
@@ -117,8 +136,9 @@ export const DEMO_HOME_MARKETPLACE: HomeMarketplaceItem[] = [
     name: 'Pi Knowledge Skill',
     description: 'Skill card for knowledge corpus browsing',
     kind: 'skill',
+    categoryLabel: 'Skills',
     href: '/marketplace?type=skill',
-    ratingLabel: '4.7 · demo',
+    ratingLabel: '★ 4.7 · demo',
     isPresentationData: true,
   },
   {
@@ -126,8 +146,9 @@ export const DEMO_HOME_MARKETPLACE: HomeMarketplaceItem[] = [
     name: 'Stream Builder Agent',
     description: 'Agent card for marketplace preview density',
     kind: 'agent',
+    categoryLabel: 'Agents',
     href: '/marketplace?type=agent',
-    ratingLabel: '4.9 · demo',
+    ratingLabel: '★ 4.9 · demo',
     isPresentationData: true,
   },
 ];
@@ -135,60 +156,68 @@ export const DEMO_HOME_MARKETPLACE: HomeMarketplaceItem[] = [
 export const DEMO_HOME_ACTIVITY: HomeActivityItem[] = [
   {
     id: `${DEMO_PREFIX}act-1`,
-    title: 'Created workspace',
+    title: 'Đã tạo workspace',
     detail: 'Pi E-commerce (presentation)',
     at: minutesAgo(2),
+    icon: '✦',
+    statusLabel: 'Demo',
     isPresentationData: true,
   },
   {
     id: `${DEMO_PREFIX}act-2`,
-    title: 'Updated agent',
-    detail: 'Code Assistant status → Running',
+    title: 'Cập nhật agent',
+    detail: 'Code Assistant → Running',
     at: minutesAgo(18),
+    icon: '◎',
+    statusLabel: 'Demo',
     isPresentationData: true,
   },
   {
     id: `${DEMO_PREFIX}act-3`,
-    title: 'Browsed Marketplace',
+    title: 'Duyệt Marketplace',
     detail: 'Pi Auth Starter',
     at: hoursAgo(3),
+    icon: '◇',
+    statusLabel: 'Demo',
+    isPresentationData: true,
+  },
+  {
+    id: `${DEMO_PREFIX}act-4`,
+    title: 'Mở Local Demo',
+    detail: 'UI preview only — no backend',
+    at: hoursAgo(6),
+    icon: '●',
+    statusLabel: 'Local',
     isPresentationData: true,
   },
 ];
 
 export const DEMO_HOME_SYSTEM_STATUS: HomeSystemStatusItem[] = [
   {
-    id: 'demo-mode',
-    label: 'Local Demo',
-    detail: 'UI preview only · DEV',
+    id: 'ai-service',
+    label: 'AI Service',
+    detail: 'Mô phỏng',
     state: 'simulated',
     tone: 'demo',
   },
   {
-    id: 'ai-backend',
-    label: 'AI / Backend',
-    detail: 'Disconnected — no API calls',
-    state: 'disconnected',
-    tone: 'off',
-  },
-  {
     id: 'pi-network',
     label: 'Pi Network',
-    detail: 'Unauthenticated — no Pi access token',
+    detail: 'Demo — không xác thực Pi',
     state: 'unauthenticated',
     tone: 'off',
   },
   {
     id: 'storage',
     label: 'Storage',
-    detail: 'Unavailable in Local Demo',
-    state: 'unavailable',
-    tone: 'off',
+    detail: 'Sẵn sàng (local UI)',
+    state: 'success',
+    tone: 'ok',
   },
   {
     id: 'database',
     label: 'Database',
-    detail: 'Simulated presentation catalog',
+    detail: 'Demo catalog',
     state: 'simulated',
     tone: 'info',
   },
@@ -204,15 +233,13 @@ export const DEMO_HOME_PI_BALANCE: HomePiBalanceView = {
   currencySymbol: 'π',
   state: 'simulated',
   paymentsEnabled: false,
-  title: 'Pi Balance (Demo)',
-  footnote:
-    'Presentation only. Not a wallet, not Testnet, not Production. Payments stay disabled.',
-  ctaLabel: 'View Pi Wallet',
+  title: 'Pi Balance',
+  footnote: 'DEMO — simulation only. Not a wallet. Payments disabled.',
+  ctaLabel: 'Xem ví Pi',
   ctaHref: '/settings',
   isPresentationData: true,
 };
 
-/** Assert helpers for tests / future Testnet swap checks. */
 export function isDemoPresentationId(id: string): boolean {
   return id.startsWith(DEMO_PREFIX);
 }

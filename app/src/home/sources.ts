@@ -40,8 +40,9 @@ export const demoHomeSource: HomeDataSource = {
   async load() {
     return {
       environment: 'demo',
-      heroSubtitle: `${PRODUCT_HERO_SUPPORT} Local Demo uses presentation data — no backend or Pi auth.`,
-      userSubtitle: 'Local Demo',
+      heroSubtitle:
+        'Local Demo chỉ hiển thị giao diện — không kết nối backend hay Pi auth. Dữ liệu bên dưới là presentation/demo.',
+      userSubtitle: 'Pi Core Team · Demo',
       capabilities: {
         canMutateBackend: false,
         showPresentationBadges: true,
@@ -53,7 +54,7 @@ export const demoHomeSource: HomeDataSource = {
       activity: { state: 'simulated', items: DEMO_HOME_ACTIVITY },
       systemStatus: DEMO_HOME_SYSTEM_STATUS,
       systemStatusFootnote:
-        'Status reflects Local Demo presentation — not production or Testnet health.',
+        'Trạng thái Local Demo / MÔ PHỎNG — không phải health production.',
       piBalance: DEMO_HOME_PI_BALANCE,
     };
   },

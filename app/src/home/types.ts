@@ -51,7 +51,15 @@ export type HomeProjectItem = {
   name: string;
   slug: string;
   updatedAt: string;
+  /** Short blurb for dense project cards (presentation or live). */
+  description?: string | null;
+  /** e.g. Workspace / App / Template */
+  projectType?: string | null;
+  /** e.g. Active / Idle / Demo */
+  statusLabel?: string | null;
   stackLabels?: string[];
+  /** Initials for collaborator chips — presentation only when demo. */
+  collaboratorInitials?: string[];
   isPresentationData?: boolean;
 };
 
@@ -63,6 +71,7 @@ export type HomeAgentItem = {
   /** Presentation status label (e.g. Ready, Running, Pending). */
   statusLabel: string;
   statusState: HomeResourceState;
+  lastActivityLabel?: string | null;
   isPresentationData?: boolean;
 };
 
@@ -75,6 +84,7 @@ export type HomeMarketplaceItem = {
   kind: HomeMarketplaceKind;
   href: string;
   ratingLabel?: string;
+  categoryLabel?: string | null;
   isPresentationData?: boolean;
 };
 
@@ -83,6 +93,9 @@ export type HomeActivityItem = {
   title: string;
   detail?: string;
   at: string;
+  /** Optional glyph / emoji for timeline row. */
+  icon?: string | null;
+  statusLabel?: string | null;
   isPresentationData?: boolean;
 };
 

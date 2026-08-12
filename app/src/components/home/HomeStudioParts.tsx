@@ -6,9 +6,10 @@
 import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight, MagnifyingGlass, Sun, Moon, User } from '@phosphor-icons/react';
-import { PiDevStudioMark } from '../ui/PiDevStudioMark';
-import { PRODUCT_HERO, PRODUCT_NAME, PRODUCT_TAGLINE } from '../../lib/branding';
+import { PRODUCT_HERO, PRODUCT_NAME } from '../../lib/branding';
 import { modKey } from '../../lib/keyboard-registry';
+import { PiHeroArtwork } from './PiHeroArtwork';
+import './homeStudio.css';
 
 export function HomeTopBar({
   userName,
@@ -28,38 +29,40 @@ export function HomeTopBar({
   onOpenSettings: () => void;
 }) {
   return (
-    <div className="flex flex-wrap items-center gap-3">
+    <div className="flex flex-wrap items-center gap-2.5">
       <button
         type="button"
         onClick={onOpenSearch}
-        className="flex min-w-0 flex-1 items-center gap-2 rounded-2xl border border-[var(--border)] bg-[var(--surface)]/80 px-3.5 py-2.5 text-left text-sm text-[var(--text-muted)] shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] transition hover:border-[var(--border-hover)] hover:bg-[var(--surface-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)]"
+        className="home-card flex min-w-0 flex-1 items-center gap-2.5 px-4 py-3 text-left text-sm text-white/55 transition hover:text-white/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7C3AED]"
         aria-label="Open command palette"
       >
-        <MagnifyingGlass size={16} className="flex-shrink-0" />
-        <span className="truncate">{searchPlaceholder || 'Search workspaces, apps, agents…'}</span>
-        <kbd className="ml-auto hidden sm:inline-flex rounded-md border border-[var(--border)] bg-[var(--bg)] px-1.5 py-0.5 text-[10px] font-medium text-[var(--text-subtle)]">
+        <MagnifyingGlass size={18} className="flex-shrink-0 text-[#A78BFA]" />
+        <span className="truncate text-[13px] sm:text-sm">
+          {searchPlaceholder || 'Tìm kiếm lệnh, dự án, agent…'}
+        </span>
+        <kbd className="ml-auto hidden sm:inline-flex rounded-md border border-white/10 bg-black/30 px-1.5 py-0.5 text-[10px] font-semibold text-white/45">
           {modKey}K
         </kbd>
       </button>
       <button
         type="button"
         onClick={onToggleTheme}
-        className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-[var(--border)] bg-[var(--surface)]/80 text-[var(--text-muted)] transition hover:text-[var(--text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)]"
+        className="home-card inline-flex h-11 w-11 items-center justify-center text-white/55 transition hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7C3AED]"
         aria-label={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
       >
-        {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
+        {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
       </button>
       <button
         type="button"
         onClick={onOpenSettings}
-        className="inline-flex max-w-[200px] items-center gap-2 rounded-2xl border border-[var(--border)] bg-[var(--surface)]/80 px-2.5 py-1.5 text-left transition hover:border-[var(--border-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)]"
+        className="home-card inline-flex max-w-[230px] items-center gap-2.5 px-2.5 py-1.5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7C3AED]"
       >
-        <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[var(--primary)]/20 text-[var(--primary)]">
-          <User size={14} weight="fill" />
+        <span className="home-icon-well flex h-8 w-8 items-center justify-center">
+          <User size={15} weight="fill" />
         </span>
-        <span className="min-w-0">
-          <span className="block truncate text-xs font-medium text-[var(--text)]">{userName}</span>
-          <span className="block truncate text-[10px] text-[var(--text-subtle)]">
+        <span className="min-w-0 hidden sm:block">
+          <span className="block truncate text-[13px] font-semibold text-white">{userName}</span>
+          <span className="block truncate text-[11px] text-white/45">
             {userSubtitle || PRODUCT_NAME}
           </span>
         </span>
@@ -70,92 +73,65 @@ export function HomeTopBar({
 
 export function HomeHero({
   greeting,
+  identityLine,
   subtitle,
   primaryCta,
   secondaryCta,
   planLine,
 }: {
   greeting: string;
+  identityLine?: string;
   subtitle: string;
   primaryCta: { label: string; onClick: () => void };
   secondaryCta: { label: string; onClick: () => void };
   planLine?: ReactNode;
 }) {
   return (
-    <section className="relative overflow-hidden rounded-2xl border border-[var(--border)] studio-surface-elevated px-5 py-6 sm:px-7 sm:py-8">
+    <section className="home-card relative overflow-hidden px-5 py-6 sm:px-8 sm:py-7 lg:px-10 lg:py-8">
       <div
         aria-hidden
         className="pointer-events-none absolute inset-0"
         style={{
           background:
-            'radial-gradient(ellipse 70% 80% at 88% 28%, rgba(124,58,237,0.38), transparent 55%), radial-gradient(ellipse 42% 50% at 8% 92%, rgba(201,162,39,0.14), transparent 50%)',
+            'radial-gradient(ellipse 58% 90% at 92% 35%, rgba(124,58,237,0.42), transparent 58%), radial-gradient(ellipse 35% 50% at 8% 90%, rgba(245,185,66,0.12), transparent 55%)',
         }}
       />
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-0 opacity-[0.35]"
-        style={{
-          backgroundImage:
-            'linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px)',
-          backgroundSize: '48px 48px',
-          maskImage: 'radial-gradient(ellipse 80% 70% at 70% 40%, black, transparent)',
-        }}
-      />
-      <div className="relative z-10 flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
-        <div className="max-w-xl">
-          <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--accent-gold,#C9A227)]">
-            {PRODUCT_TAGLINE}
+      <div className="relative z-10 grid grid-cols-1 items-center gap-6 lg:grid-cols-12 lg:gap-4">
+        <div className="min-w-0 lg:col-span-7 xl:col-span-8">
+          <p className="mb-2 text-[11px] font-bold uppercase tracking-[0.18em] text-[#F5B942]">
+            {PRODUCT_NAME}
           </p>
-          <h1 className="font-heading text-2xl font-semibold tracking-tight text-[var(--text)] sm:text-3xl lg:text-[2.15rem] lg:leading-tight">
+          <h1 className="font-heading text-[1.85rem] font-semibold tracking-tight text-white sm:text-4xl lg:text-[2.75rem] lg:leading-[1.08]">
             {greeting}
           </h1>
-          <p className="mt-2 text-sm leading-relaxed text-[var(--text-muted)] sm:text-[15px]">
+          <p className="mt-2 font-heading text-lg font-medium text-[#C4B5FD] sm:text-xl">
+            {identityLine || PRODUCT_HERO}
+          </p>
+          <p className="mt-3 max-w-xl text-[14px] leading-relaxed text-white/70 sm:text-[15px]">
             {subtitle}
           </p>
           <div className="mt-5 flex flex-wrap items-center gap-2.5">
             <button
               type="button"
               onClick={primaryCta.onClick}
-              className="inline-flex items-center justify-center rounded-xl bg-[var(--primary)] px-4 py-2.5 text-sm font-semibold text-white shadow-[0_8px_24px_rgba(124,58,237,0.35)] transition hover:bg-[var(--primary-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)]"
+              className="inline-flex items-center justify-center rounded-xl bg-[#7C3AED] px-5 py-2.5 text-sm font-semibold text-white shadow-[0_10px_30px_rgba(124,58,237,0.5)] transition hover:bg-[#9333EA] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7C3AED]"
             >
               {primaryCta.label}
             </button>
             <button
               type="button"
               onClick={secondaryCta.onClick}
-              className="inline-flex items-center justify-center rounded-xl border border-[var(--border-hover)] bg-transparent px-4 py-2.5 text-sm font-semibold text-[var(--text)] transition hover:bg-[var(--surface-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)]"
+              className="inline-flex items-center justify-center rounded-xl border border-white/15 bg-white/[0.04] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-white/[0.08] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7C3AED]"
             >
               {secondaryCta.label}
             </button>
             {planLine}
           </div>
         </div>
-        <div className="relative mx-auto flex h-28 w-28 items-center justify-center sm:h-36 sm:w-36 lg:mx-0">
-          <div
-            aria-hidden
-            className="absolute inset-0 rounded-full opacity-80 motion-safe:animate-[home-pi-orbit_14s_linear_infinite]"
-            style={{
-              background:
-                'conic-gradient(from 210deg, rgba(124,58,237,0.55), rgba(201,162,39,0.35), rgba(167,139,250,0.4), rgba(124,58,237,0.55))',
-              filter: 'blur(1px)',
-            }}
-          />
-          <div className="absolute inset-2 rounded-full border border-white/10 bg-[#0B0A14]/88 backdrop-blur-sm" />
-          <div className="relative z-10 drop-shadow-[0_0_28px_rgba(124,58,237,0.5)]">
-            <PiDevStudioMark size={64} />
-          </div>
+        <div className="flex justify-center lg:col-span-5 xl:col-span-4 lg:justify-end">
+          <PiHeroArtwork className="w-[min(100%,280px)] sm:w-[300px] lg:w-[320px]" />
         </div>
       </div>
-      <style>{`
-        @keyframes home-pi-orbit {
-          to { transform: rotate(360deg); }
-        }
-        @media (prefers-reduced-motion: reduce) {
-          .motion-safe\\:animate-\\[home-pi-orbit_14s_linear_infinite\\] {
-            animation: none !important;
-          }
-        }
-      `}</style>
     </section>
   );
 }
@@ -172,17 +148,15 @@ export function HomeSectionHeader({
   action?: ReactNode;
 }) {
   return (
-    <div className="mb-3 flex items-start justify-between gap-3">
+    <div className="mb-3 flex items-end justify-between gap-3">
       <div className="min-w-0">
         <h2
           id={id}
-          className="text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)]"
+          className="font-heading text-[15px] font-semibold tracking-tight text-white sm:text-base"
         >
           {title}
         </h2>
-        {subtitle && (
-          <p className="mt-0.5 text-[11px] text-[var(--text-subtle)] leading-snug">{subtitle}</p>
-        )}
+        {subtitle && <p className="mt-0.5 text-[12px] text-white/45">{subtitle}</p>}
       </div>
       {action}
     </div>
@@ -196,6 +170,7 @@ export function HomeQuickAction({
   onClick,
   disabled,
   badge,
+  accent = 'violet',
 }: {
   icon: ReactNode;
   title: string;
@@ -203,7 +178,15 @@ export function HomeQuickAction({
   onClick: () => void;
   disabled?: boolean;
   badge?: string;
+  accent?: 'violet' | 'gold' | 'mint';
 }) {
+  const accentClass =
+    accent === 'gold'
+      ? 'from-[#F5B942]/25 to-transparent text-[#FBBF24]'
+      : accent === 'mint'
+        ? 'from-[#22C55E]/20 to-transparent text-[#4ADE80]'
+        : 'from-[#7C3AED]/30 to-transparent text-[#C4B5FD]';
+
   return (
     <button
       type="button"
@@ -211,25 +194,21 @@ export function HomeQuickAction({
       disabled={disabled}
       aria-disabled={disabled || undefined}
       className={[
-        'group relative flex min-h-[112px] flex-col items-start gap-3 rounded-2xl border px-3.5 py-3.5 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)]',
-        disabled
-          ? 'cursor-not-allowed border-[var(--border)] studio-surface opacity-60'
-          : 'cursor-pointer border-[var(--border)] studio-surface hover:border-[color-mix(in_srgb,var(--primary)_42%,var(--border))] hover:bg-[var(--surface-hover)] hover:shadow-[0_0_28px_-14px_rgba(124,58,237,0.55)]',
+        'home-card home-card-interactive group relative flex min-h-[118px] flex-col items-start justify-between gap-3 overflow-hidden p-3.5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7C3AED]',
+        disabled ? 'cursor-not-allowed opacity-60' : 'cursor-pointer',
       ].join(' ')}
     >
-      {badge && (
-        <span className="absolute right-2.5 top-2.5 rounded-full border border-[var(--border)] bg-[var(--bg)] px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-[var(--text-muted)]">
-          {badge}
-        </span>
-      )}
-      <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-[var(--primary)]/15 text-[var(--primary)] transition group-hover:bg-[var(--primary)]/25">
+      <div
+        aria-hidden
+        className={`pointer-events-none absolute -right-6 -top-8 h-24 w-24 rounded-full bg-gradient-to-br ${accentClass} opacity-70 blur-2xl transition group-hover:opacity-100`}
+      />
+      {badge && <span className="home-badge-demo absolute right-2.5 top-2.5 z-10">{badge}</span>}
+      <span className="home-icon-well relative z-10 h-10 w-10 transition group-hover:scale-[1.05]">
         {icon}
       </span>
-      <span>
-        <span className="block text-sm font-semibold text-[var(--text)]">{title}</span>
-        <span className="mt-0.5 block text-[11px] leading-snug text-[var(--text-muted)]">
-          {description}
-        </span>
+      <span className="relative z-10">
+        <span className="block text-[13px] font-semibold text-white sm:text-[14px]">{title}</span>
+        <span className="mt-1 block text-[11px] leading-snug text-white/50">{description}</span>
       </span>
     </button>
   );
@@ -251,18 +230,14 @@ export function HomeEmptyState({
   actionTo?: string;
 }) {
   return (
-    <div className="flex flex-col items-center gap-2 rounded-2xl border border-[var(--border)] studio-surface px-4 py-8 text-center">
-      {icon && (
-        <div className="mb-1 flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--primary)]/12 text-[var(--primary)]">
-          {icon}
-        </div>
-      )}
-      <p className="text-sm font-medium text-[var(--text)]">{title}</p>
-      <p className="max-w-sm text-xs text-[var(--text-muted)] leading-relaxed">{description}</p>
+    <div className="home-card flex flex-col items-center gap-2 px-5 py-9 text-center">
+      {icon && <div className="home-icon-well mb-1 h-12 w-12">{icon}</div>}
+      <p className="text-[15px] font-semibold text-white">{title}</p>
+      <p className="max-w-md text-[13px] leading-relaxed text-white/55">{description}</p>
       {actionLabel && actionTo && (
         <Link
           to={actionTo}
-          className="mt-2 rounded-lg bg-[var(--primary)] px-3 py-2 text-xs font-semibold text-white transition hover:bg-[var(--primary-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)]"
+          className="mt-3 rounded-xl bg-[#7C3AED] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#9333EA] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7C3AED]"
         >
           {actionLabel}
         </Link>
@@ -271,7 +246,7 @@ export function HomeEmptyState({
         <button
           type="button"
           onClick={onAction}
-          className="mt-2 rounded-lg bg-[var(--primary)] px-3 py-2 text-xs font-semibold text-white transition hover:bg-[var(--primary-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)]"
+          className="mt-3 rounded-xl bg-[#7C3AED] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#9333EA] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7C3AED]"
         >
           {actionLabel}
         </button>
@@ -287,6 +262,7 @@ export function HomeIdentityCta({
   onPrimary,
   secondaryLabel,
   onSecondary,
+  metrics,
 }: {
   title?: string;
   subtitle?: string;
@@ -294,47 +270,59 @@ export function HomeIdentityCta({
   onPrimary: () => void;
   secondaryLabel: string;
   onSecondary: () => void;
+  metrics?: Array<{ label: string; value: string }>;
 }) {
   return (
-    <section className="relative overflow-hidden rounded-2xl border border-[var(--border)] px-5 py-7 sm:px-8 sm:py-9">
+    <section className="relative overflow-hidden rounded-2xl border border-[rgba(124,58,237,0.4)] px-5 py-8 sm:px-8 sm:py-9">
       <div
         aria-hidden
         className="absolute inset-0"
         style={{
           background:
-            'linear-gradient(120deg, rgba(124,58,237,0.3) 0%, rgba(20,18,37,0.95) 48%, rgba(201,162,39,0.14) 100%)',
+            'linear-gradient(115deg, rgba(124,58,237,0.5) 0%, rgba(11,8,19,0.96) 45%, rgba(245,185,66,0.18) 100%)',
         }}
       />
-      <div className="relative z-10 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="max-w-lg flex items-start gap-4">
-          <div className="hidden sm:flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-black/30">
-            <PiDevStudioMark size={36} />
+      <div className="relative z-10 flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex min-w-0 items-center gap-5">
+          <div className="hidden sm:block w-[120px] shrink-0">
+            <PiHeroArtwork />
           </div>
-          <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--accent-gold,#C9A227)]">
+          <div className="min-w-0">
+            <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-[#F5B942]">
               {PRODUCT_NAME}
             </p>
-            <h2 className="mt-1 font-heading text-xl font-semibold text-[var(--text)] sm:text-2xl">
+            <h2 className="mt-1 font-heading text-2xl font-semibold text-white sm:text-3xl">
               {title || PRODUCT_HERO}
             </h2>
-            <p className="mt-2 text-sm text-[var(--text-muted)]">
-              {subtitle ||
-                'A serious AI development platform for the Pi ecosystem — not price speculation.'}
+            <p className="mt-2 max-w-xl text-[14px] text-white/65">
+              {subtitle || 'Nền tảng developer AI trong hệ sinh thái Pi.'}
             </p>
+            {metrics && metrics.length > 0 && (
+              <div className="mt-3.5 flex flex-wrap gap-2">
+                {metrics.map((m) => (
+                  <span
+                    key={m.label}
+                    className="rounded-full border border-white/10 bg-black/30 px-3 py-1 text-[11px] text-white/55"
+                  >
+                    <span className="font-semibold text-white">{m.value}</span> {m.label}
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-2.5">
           <button
             type="button"
             onClick={onPrimary}
-            className="rounded-xl bg-[var(--primary)] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[var(--primary-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)]"
+            className="rounded-xl bg-[#7C3AED] px-5 py-2.5 text-sm font-semibold text-white shadow-[0_10px_28px_rgba(124,58,237,0.45)] transition hover:bg-[#9333EA] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7C3AED]"
           >
             {primaryLabel}
           </button>
           <button
             type="button"
             onClick={onSecondary}
-            className="rounded-xl border border-[var(--border-hover)] bg-transparent px-4 py-2.5 text-sm font-semibold text-[var(--text)] transition hover:bg-[var(--surface-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)]"
+            className="rounded-xl border border-white/15 bg-white/5 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7C3AED]"
           >
             {secondaryLabel}
           </button>
@@ -344,7 +332,6 @@ export function HomeIdentityCta({
   );
 }
 
-/** Environment-agnostic status tones (demo/testnet/production all map here). */
 export type SystemStatusTone = 'ok' | 'warn' | 'off' | 'demo' | 'info' | 'pending';
 
 export function HomeSystemStatusPanel({
@@ -357,33 +344,31 @@ export function HomeSystemStatusPanel({
   items: Array<{ id?: string; label: string; detail: string; tone: SystemStatusTone }>;
 }) {
   const toneClass: Record<SystemStatusTone, string> = {
-    ok: 'bg-[var(--status-success)]',
-    warn: 'bg-[var(--status-warning,#c9a227)]',
-    off: 'bg-[var(--text-subtle)]',
-    demo: 'bg-[var(--accent-gold,#C9A227)]',
-    info: 'bg-[var(--primary)]',
-    pending: 'bg-[var(--status-warning,#c9a227)] animate-pulse',
+    ok: 'bg-[#22C55E] shadow-[0_0_8px_rgba(34,197,94,0.55)]',
+    warn: 'bg-[#F5B942] shadow-[0_0_8px_rgba(245,185,66,0.45)]',
+    off: 'bg-white/25',
+    demo: 'bg-[#F5B942] shadow-[0_0_8px_rgba(245,185,66,0.5)]',
+    info: 'bg-[#7C3AED] shadow-[0_0_8px_rgba(124,58,237,0.5)]',
+    pending: 'bg-[#F5B942] animate-pulse',
   };
 
   return (
-    <aside className="rounded-2xl border border-[var(--border)] studio-surface p-4 sm:p-5">
-      <h2 className="text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">
-        {title || 'System status'}
+    <aside className="home-rail-card p-4">
+      <h2 className="font-heading text-[14px] font-semibold text-white">
+        {title || 'Trạng thái hệ thống'}
       </h2>
-      {footnote && (
-        <p className="mt-1 text-[10px] leading-relaxed text-[var(--text-muted)]">{footnote}</p>
-      )}
+      {footnote && <p className="mt-1 text-[11px] leading-relaxed text-white/45">{footnote}</p>}
       <ul className="mt-3 space-y-2.5">
         {items.map((item) => (
-          <li key={item.id || item.label} className="flex items-start gap-2.5">
-            <span
-              className={`mt-1.5 h-2 w-2 flex-shrink-0 rounded-full ${toneClass[item.tone]}`}
-              aria-hidden
-            />
-            <span className="min-w-0">
-              <span className="block text-xs font-medium text-[var(--text)]">{item.label}</span>
-              <span className="block text-[11px] text-[var(--text-muted)]">{item.detail}</span>
+          <li
+            key={item.id || item.label}
+            className="flex items-center justify-between gap-3 rounded-lg border border-white/[0.06] bg-black/20 px-2.5 py-2"
+          >
+            <span className="flex min-w-0 items-center gap-2.5">
+              <span className={`h-2 w-2 shrink-0 rounded-full ${toneClass[item.tone]}`} aria-hidden />
+              <span className="truncate text-[13px] font-medium text-white">{item.label}</span>
             </span>
+            <span className="shrink-0 text-[11px] font-semibold text-white/50">{item.detail}</span>
           </li>
         ))}
       </ul>
@@ -391,11 +376,6 @@ export function HomeSystemStatusPanel({
   );
 }
 
-/**
- * Presentational Pi balance / ledger panel.
- * Renders DEMO | TESTNET | PRODUCTION labels from the view-model.
- * Never executes payments — CTA is a plain navigation callback/href.
- */
 export function HomePiBalancePanel({
   ledgerEnvironment,
   displayAmount,
@@ -419,46 +399,46 @@ export function HomePiBalancePanel({
   isPresentationData: boolean;
   state: string;
 }) {
-  const envBadgeClass =
-    ledgerEnvironment === 'DEMO'
-      ? 'border-[color-mix(in_srgb,var(--accent-gold,#C9A227)_40%,var(--border))] text-[var(--accent-gold,#C9A227)]'
-      : ledgerEnvironment === 'TESTNET'
-        ? 'border-[color-mix(in_srgb,var(--primary)_40%,var(--border))] text-[var(--primary)]'
-        : 'border-[var(--border)] text-[var(--text-muted)]';
-
   return (
     <aside
-      className="rounded-2xl border border-[color-mix(in_srgb,var(--accent-gold,#C9A227)_28%,var(--border))] bg-[color-mix(in_srgb,var(--accent-gold,#C9A227)_8%,var(--surface))] p-4 sm:p-5"
+      className="relative overflow-hidden rounded-2xl border border-[rgba(245,185,66,0.35)] p-4"
+      style={{
+        background:
+          'radial-gradient(ellipse 80% 70% at 90% 10%, rgba(245,185,66,0.22), transparent 55%), linear-gradient(160deg, #1B1633 0%, #121020 55%, #0B0813 100%)',
+      }}
       data-ledger-env={ledgerEnvironment}
       data-presentation={isPresentationData ? 'true' : 'false'}
       data-payments-enabled={paymentsEnabled ? 'true' : 'false'}
       data-state={state}
     >
       <div className="mb-2 flex items-center justify-between gap-2">
-        <p className="text-xs font-semibold text-[var(--text)]">{title}</p>
-        <span
-          className={`rounded-full border px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider ${envBadgeClass}`}
-        >
-          {ledgerEnvironment}
-        </span>
+        <p className="text-[12px] font-bold uppercase tracking-[0.14em] text-[#F5B942]">
+          {title}
+        </p>
+        <span className="home-badge-demo">{ledgerEnvironment}</span>
       </div>
       {displayAmount != null ? (
-        <p className="font-heading text-2xl font-semibold tabular-nums text-[var(--accent-gold,#C9A227)]">
-          {displayAmount}{' '}
-          <span className="text-base font-medium">{currencySymbol}</span>
+        <p className="font-heading text-[2.15rem] font-semibold leading-none tabular-nums text-[#FBBF24] sm:text-[2.4rem]">
+          {displayAmount}
+          <span className="ml-1.5 text-xl font-medium">{currencySymbol}</span>
         </p>
       ) : (
-        <p className="text-sm text-[var(--text-muted)]">Balance unavailable</p>
+        <p className="text-sm text-white/55">Balance unavailable</p>
       )}
-      <p className="mt-2 text-[11px] leading-relaxed text-[var(--text-muted)]">{footnote}</p>
+      {isPresentationData && (
+        <p className="mt-2 text-[10px] font-bold uppercase tracking-[0.14em] text-[#F5B942]/90">
+          Simulation only · DEMO
+        </p>
+      )}
+      <p className="mt-2 text-[12px] leading-relaxed text-white/50">{footnote}</p>
       {!paymentsEnabled && (
-        <p className="mt-1 text-[10px] font-medium uppercase tracking-wide text-[var(--text-subtle)]">
+        <p className="mt-1 text-[10px] font-semibold uppercase tracking-wide text-white/35">
           Payments disabled
         </p>
       )}
       <Link
         to={ctaHref}
-        className="mt-3 inline-flex text-xs font-semibold text-[var(--primary)] hover:underline focus-visible:outline-none focus-visible:underline"
+        className="mt-3.5 inline-flex rounded-xl border border-[rgba(245,185,66,0.4)] bg-[#F5B942]/10 px-3.5 py-2 text-[12px] font-semibold text-[#FBBF24] transition hover:bg-[#F5B942]/18 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7C3AED]"
       >
         {ctaLabel}
       </Link>
@@ -476,10 +456,10 @@ export function HomeSectionLink({
   return (
     <Link
       to={to}
-      className="inline-flex items-center gap-1 text-[11px] font-medium text-[var(--text-muted)] transition hover:text-[var(--text)] focus-visible:outline-none focus-visible:underline"
+      className="inline-flex items-center gap-1 text-[12px] font-semibold text-[#C4B5FD] transition hover:text-white focus-visible:outline-none focus-visible:underline"
     >
       {children}
-      <ArrowRight size={12} />
+      <ArrowRight size={13} />
     </Link>
   );
 }

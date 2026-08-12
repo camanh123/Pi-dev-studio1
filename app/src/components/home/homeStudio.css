@@ -1,0 +1,200 @@
+/**
+ * Home visual system — presentation only.
+ * Color language aligned to Pi Dev Studio reference concept.
+ */
+
+.home-studio {
+  --home-bg-0: #07060d;
+  --home-bg-1: #0b0813;
+  --home-card-0: #121020;
+  --home-card-1: #16122b;
+  --home-card-2: #1b1633;
+  --home-violet: #7c3aed;
+  --home-violet-bright: #9333ea;
+  --home-gold: #f5b942;
+  --home-gold-bright: #fbbf24;
+  --home-green: #22c55e;
+  --home-gap: 1rem;
+  --home-radius: 1.05rem;
+  --home-border: rgba(124, 58, 237, 0.28);
+  --home-glow: 0 0 36px -10px rgba(124, 58, 237, 0.55);
+  color: #f8f7ff;
+  background:
+    radial-gradient(ellipse 55% 40% at 85% 8%, rgba(124, 58, 237, 0.22), transparent 55%),
+    radial-gradient(ellipse 40% 30% at 10% 0%, rgba(245, 185, 66, 0.06), transparent 50%),
+    linear-gradient(180deg, var(--home-bg-1) 0%, var(--home-bg-0) 100%);
+}
+
+.home-studio .home-card {
+  border: 1px solid var(--home-border);
+  border-radius: var(--home-radius);
+  background:
+    linear-gradient(165deg, var(--home-card-2) 0%, var(--home-card-0) 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    0 12px 28px -18px rgba(0, 0, 0, 0.75);
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    transform 0.2s ease;
+}
+
+.home-studio .home-card:hover {
+  border-color: rgba(147, 51, 234, 0.55);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    var(--home-glow),
+    0 16px 36px -16px rgba(0, 0, 0, 0.8);
+}
+
+.home-studio .home-card-interactive:hover {
+  transform: translateY(-2px);
+}
+
+.home-studio .home-rail-card {
+  border: 1px solid var(--home-border);
+  border-radius: var(--home-radius);
+  background: linear-gradient(180deg, var(--home-card-1) 0%, var(--home-card-0) 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.home-studio .home-icon-well {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.9rem;
+  background:
+    radial-gradient(circle at 30% 25%, rgba(167, 139, 250, 0.4), transparent 55%),
+    rgba(124, 58, 237, 0.18);
+  border: 1px solid rgba(124, 58, 237, 0.35);
+  color: #c4b5fd;
+  box-shadow: 0 0 20px -8px rgba(124, 58, 237, 0.8);
+}
+
+.home-studio .home-badge-demo {
+  border: 1px solid rgba(245, 185, 66, 0.45);
+  color: var(--home-gold);
+  background: rgba(245, 185, 66, 0.12);
+  border-radius: 999px;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 0.15rem 0.45rem;
+}
+
+.home-studio .home-avatar {
+  display: inline-flex;
+  height: 1.35rem;
+  width: 1.35rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  border: 1.5px solid #0b0813;
+  background: linear-gradient(135deg, #7c3aed, #4c1d95);
+  font-size: 8px;
+  font-weight: 700;
+  color: white;
+  margin-left: -0.35rem;
+}
+
+.home-studio .home-avatar:first-child {
+  margin-left: 0;
+}
+
+/* —— Pi hero artwork —— */
+.pi-hero-art {
+  position: relative;
+  width: min(100%, 320px);
+  aspect-ratio: 1;
+  margin-inline: auto;
+}
+
+.pi-hero-art__glow {
+  position: absolute;
+  inset: 8%;
+  border-radius: 999px;
+  background: radial-gradient(circle, rgba(124, 58, 237, 0.55), transparent 68%);
+  filter: blur(18px);
+  opacity: 0.9;
+}
+
+.pi-hero-art__glow--gold {
+  inset: 22%;
+  background: radial-gradient(circle, rgba(245, 185, 66, 0.35), transparent 70%);
+  filter: blur(22px);
+  opacity: 0.75;
+}
+
+.pi-hero-art__rings {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  height: 100%;
+  filter: drop-shadow(0 0 28px rgba(124, 58, 237, 0.45));
+}
+
+.pi-hero-art__spin-slow {
+  transform-origin: 160px 160px;
+  animation: pi-orbit 22s linear infinite;
+}
+
+.pi-hero-art__spin-rev {
+  transform-origin: 160px 160px;
+  animation: pi-orbit-rev 28s linear infinite;
+}
+
+.pi-hero-art__particle {
+  position: absolute;
+  z-index: 3;
+  width: 4px;
+  height: 4px;
+  border-radius: 999px;
+  background: #a78bfa;
+  box-shadow: 0 0 10px rgba(167, 139, 250, 0.9);
+  animation: pi-twinkle 3.2s ease-in-out infinite;
+}
+
+.pi-hero-art__particle--gold {
+  background: var(--home-gold-bright);
+  box-shadow: 0 0 10px rgba(251, 191, 36, 0.9);
+  animation-delay: 0.8s;
+}
+
+@keyframes pi-orbit {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes pi-orbit-rev {
+  to {
+    transform: rotate(-360deg);
+  }
+}
+
+@keyframes pi-twinkle {
+  0%,
+  100% {
+    opacity: 0.35;
+    transform: scale(0.85);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.15);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pi-hero-art__spin-slow,
+  .pi-hero-art__spin-rev,
+  .pi-hero-art__particle {
+    animation: none !important;
+  }
+
+  .home-studio .home-card,
+  .home-studio .home-card-interactive:hover {
+    transition: none;
+    transform: none;
+  }
+}

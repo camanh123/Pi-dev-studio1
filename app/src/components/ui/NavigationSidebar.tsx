@@ -361,26 +361,31 @@ export function NavigationSidebar({
   };
 
   // Shared button class for nav items — rounded-lg, 7px internal padding to keep icons at 18px from wall
+  // Visual polish only: stronger active glow for Pi Dev Studio shell (routes/handlers unchanged).
   const navButtonClass = (isActive: boolean) =>
-    `group flex items-center h-7 w-full transition-colors rounded-lg pl-[7px] pr-[7px] gap-3 ${
-      isActive ? 'bg-[var(--sidebar-active)]' : 'hover:bg-[var(--sidebar-hover)]'
+    `group flex items-center h-8 w-full transition-all duration-200 rounded-lg pl-[7px] pr-[7px] gap-3 ${
+      isActive
+        ? 'bg-[color-mix(in_srgb,var(--primary)_22%,var(--sidebar-active))] shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--primary)_35%,transparent),0_0_18px_-10px_rgba(124,58,237,0.7)]'
+        : 'hover:bg-[var(--sidebar-hover)]'
     }`;
 
   const navButtonClassCollapsed = (isActive: boolean) =>
-    `group flex items-center justify-center h-7 w-full transition-colors rounded-lg ${
-      isActive ? 'bg-[var(--sidebar-active)]' : 'hover:bg-[var(--sidebar-hover)]'
+    `group flex items-center justify-center h-8 w-full transition-all duration-200 rounded-lg ${
+      isActive
+        ? 'bg-[color-mix(in_srgb,var(--primary)_22%,var(--sidebar-active))] shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--primary)_35%,transparent),0_0_18px_-10px_rgba(124,58,237,0.7)]'
+        : 'hover:bg-[var(--sidebar-hover)]'
     }`;
 
   const inactiveNavButton =
-    'group flex items-center h-7 w-full transition-colors rounded-lg pl-[7px] pr-[7px] gap-3 hover:bg-[var(--sidebar-hover)]';
+    'group flex items-center h-8 w-full transition-colors rounded-lg pl-[7px] pr-[7px] gap-3 hover:bg-[var(--sidebar-hover)]';
 
   const inactiveNavButtonCollapsed =
-    'group flex items-center justify-center h-7 w-full transition-colors rounded-lg hover:bg-[var(--sidebar-hover)]';
+    'group flex items-center justify-center h-8 w-full transition-colors rounded-lg hover:bg-[var(--sidebar-hover)]';
 
   const iconClass = (isActive: boolean) =>
     `transition-colors ${
       isActive
-        ? 'text-[var(--sidebar-text)]'
+        ? 'text-[var(--primary)]'
         : 'text-[var(--text-subtle)] group-hover:text-[var(--sidebar-text)]'
     }`;
 
@@ -405,7 +410,11 @@ export function NavigationSidebar({
         duration: 0.25,
         ease: [0.22, 1, 0.36, 1],
       }}
-      className={`${forceVisible ? 'flex' : 'hidden md:flex'} flex-col h-full bg-[var(--sidebar-bg)] overflow-x-hidden border-r border-[var(--sidebar-border)]`}
+      className={`${forceVisible ? 'flex' : 'hidden md:flex'} flex-col h-full overflow-x-hidden border-r border-[color-mix(in_srgb,var(--primary)_18%,var(--sidebar-border))]`}
+      style={{
+        background:
+          'linear-gradient(180deg, color-mix(in srgb, var(--sidebar-bg) 92%, #7c3aed 8%) 0%, var(--sidebar-bg) 40%, var(--sidebar-bg) 100%)',
+      }}
     >
       {/* Product brand */}
       <div
@@ -736,8 +745,8 @@ export function NavigationSidebar({
         {activePage !== 'builder' && (
           <>
             {isExpanded && (
-              <div className="px-2 pt-1 pb-1">
-                <span className="text-[9px] font-semibold uppercase tracking-[0.12em] text-[var(--text-subtle)]">
+              <div className="px-2 pt-1.5 pb-1">
+                <span className="text-[9px] font-semibold uppercase tracking-[0.14em] text-[var(--accent-gold,#C9A227)]">
                   Studio
                 </span>
               </div>
@@ -928,7 +937,7 @@ export function NavigationSidebar({
             {/* Resources — real Library routes only (no invented destinations) */}
             {isExpanded && (
               <div className="px-2 pt-3 pb-1">
-                <span className="text-[9px] font-semibold uppercase tracking-[0.12em] text-[var(--text-subtle)]">
+                <span className="text-[9px] font-semibold uppercase tracking-[0.14em] text-[var(--accent-gold,#C9A227)]">
                   Library & tools
                 </span>
               </div>

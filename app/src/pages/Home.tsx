@@ -11,6 +11,9 @@ import {
   Storefront,
   Robot,
   Sparkle,
+  ArrowRight,
+  Code,
+  Cube,
 } from '@phosphor-icons/react';
 import { MoodyFace } from '../components/ui/MoodyFace';
 import { CreateProjectModal, RepoImportModal } from '../components/modals';
@@ -30,6 +33,7 @@ import {
   HomeSectionLink,
   HomePiBalancePanel,
 } from '../components/home/HomeStudioParts';
+import '../components/home/homeStudio.css';
 
 const RELATIVE_UNITS: Array<[Intl.RelativeTimeFormatUnit, number]> = [
   ['year', 60 * 60 * 24 * 365],
@@ -46,7 +50,7 @@ function formatRelativeTime(iso: string): string {
   const then = new Date(iso).getTime();
   if (Number.isNaN(then)) return '';
   const deltaSec = Math.round((then - Date.now()) / 1000);
-  const formatter = new Intl.RelativeTimeFormat(undefined, { numeric: 'auto', style: 'short' });
+  const formatter = new Intl.RelativeTimeFormat('vi', { numeric: 'auto', style: 'short' });
   for (const [unit, secondsInUnit] of RELATIVE_UNITS) {
     if (Math.abs(deltaSec) >= secondsInUnit || unit === 'second') {
       return formatter.format(Math.round(deltaSec / secondsInUnit), unit);
@@ -57,12 +61,12 @@ function formatRelativeTime(iso: string): string {
 
 function agentStatusClass(state: HomeResourceState): string {
   if (state === 'connected' || state === 'success') {
-    return 'border-[color-mix(in_srgb,var(--status-success)_35%,var(--border))] bg-[color-mix(in_srgb,var(--status-success)_12%,transparent)] text-[var(--status-success)]';
+    return 'border-[rgba(34,197,94,0.4)] bg-[rgba(34,197,94,0.14)] text-[#4ADE80]';
   }
   if (state === 'pending' || state === 'loading') {
-    return 'border-[color-mix(in_srgb,var(--status-warning,#c9a227)_35%,var(--border))] bg-[color-mix(in_srgb,var(--status-warning,#c9a227)_12%,transparent)] text-[var(--status-warning,#c9a227)]';
+    return 'border-[rgba(245,185,66,0.45)] bg-[rgba(245,185,66,0.14)] text-[#FBBF24]';
   }
-  return 'border-[var(--border)] bg-[var(--surface)] text-[var(--text-muted)]';
+  return 'border-white/10 bg-white/5 text-white/55';
 }
 
 function listEmptyCopy(
@@ -70,39 +74,33 @@ function listEmptyCopy(
   kind: 'projects' | 'agents' | 'marketplace',
   errorMessage?: string,
 ): { title: string; description: string } {
-  if (state === 'simulated') {
-    return {
-      title: `No ${kind} presentation data`,
-      description: 'Presentation catalog is empty for this slice.',
-    };
-  }
   if (state === 'failed') {
     return {
-      title: `Could not load ${kind}`,
-      description: errorMessage || 'The data source returned an error.',
+      title: `Không tải được ${kind}`,
+      description: errorMessage || 'Nguồn dữ liệu trả về lỗi.',
     };
   }
   if (state === 'unavailable') {
     return {
-      title: `${kind[0].toUpperCase()}${kind.slice(1)} unavailable`,
-      description: errorMessage || 'This feed is not wired for the current data environment.',
+      title: `${kind} chưa khả dụng`,
+      description: errorMessage || 'Feed chưa được nối cho môi trường hiện tại.',
     };
   }
   if (kind === 'projects') {
     return {
-      title: 'No workspaces yet',
-      description: 'Create a workspace to start building with AI for the Pi ecosystem.',
+      title: 'Chưa có workspace',
+      description: 'Tạo workspace để bắt đầu xây dựng với AI cho hệ sinh thái Pi.',
     };
   }
   if (kind === 'agents') {
     return {
-      title: 'No agents yet',
-      description: 'Add agents from the Marketplace or create one with @agent-builder.',
+      title: 'Chưa có agent',
+      description: 'Thêm agent từ Marketplace hoặc tạo với @agent-builder.',
     };
   }
   return {
-    title: 'No marketplace preview',
-    description: 'Catalog is empty or the API did not respond.',
+    title: 'Chưa có preview Marketplace',
+    description: 'Catalog trống hoặc API không phản hồi.',
   };
 }
 
@@ -117,13 +115,14 @@ export default function Home() {
 
   const canMutate = viewModel.capabilities.canMutateBackend;
   const showBadges = viewModel.capabilities.showPresentationBadges;
+  const isDemo = viewModel.environment === 'demo';
 
   const handleCreateProject = useCallback(
     async (projectName: string, baseId?: string, baseVersion?: string) => {
       if (isCreating) return;
       if (!canMutate) {
         toast.error(
-          `${viewModel.environment === 'demo' ? 'Local Demo' : 'Current'} mode is presentation-only — workspace creation requires a live backend.`,
+          'Local Demo chỉ là giao diện — tạo workspace cần backend thật.',
         );
         return;
       }
@@ -169,16 +168,14 @@ export default function Home() {
         setIsCreating(false);
       }
     },
-    [isCreating, navigate, canMutate, viewModel.environment],
+    [isCreating, navigate, canMutate],
   );
 
   const handleImportRepo = useCallback(
     async (provider: string, repoUrl: string, branch: string, projectName: string) => {
       if (isCreating) return;
       if (!canMutate) {
-        toast.error(
-          `${viewModel.environment === 'demo' ? 'Local Demo' : 'Current'} mode is presentation-only — importing requires a live backend.`,
-        );
+        toast.error('Local Demo chỉ là giao diện — import cần backend thật.');
         return;
       }
       setIsCreating(true);
@@ -222,13 +219,13 @@ export default function Home() {
         setIsCreating(false);
       }
     },
-    [isCreating, navigate, canMutate, viewModel.environment],
+    [isCreating, navigate, canMutate],
   );
 
   const handleUpgrade = () => navigate('/settings/team/billing');
   const handleOpenProject = (slug: string, isPresentation?: boolean) => {
     if (isPresentation) {
-      toast('Presentation workspace — open Workspaces to create a real project.', { icon: 'ℹ️' });
+      toast('Workspace presentation — mở Workspaces để tạo dự án thật.', { icon: 'ℹ️' });
       return;
     }
     navigate(`/project/${slug}`);
@@ -254,51 +251,59 @@ export default function Home() {
     viewModel.marketplace.errorMessage,
   );
 
+  const demoSafeMetrics = isDemo
+    ? [
+        { value: String(viewModel.projects.items.length), label: 'Demo Projects' },
+        { value: String(viewModel.agents.items.length), label: 'Demo Agents' },
+        { value: String(viewModel.marketplace.items.length), label: 'Featured Templates' },
+        { value: 'Local', label: 'Demo' },
+      ]
+    : undefined;
+
   return (
-    <div className="h-full w-full overflow-y-auto studio-app-bg">
-      <div className="mx-auto flex min-h-full w-full max-w-[1440px] flex-col gap-8 px-4 py-6 sm:gap-10 sm:px-6 sm:py-8 lg:px-8">
+    <div className="home-studio h-full w-full overflow-y-auto">
+      <div className="mx-auto flex min-h-full w-full max-w-[1520px] flex-col gap-4 px-4 py-4 sm:gap-5 sm:px-6 sm:py-5 lg:px-7 lg:py-6">
         <HomeTopBar
           userName={viewModel.userDisplayName}
           userSubtitle={viewModel.userSubtitle}
           theme={theme}
-          searchPlaceholder="Search commands, workspaces, apps…"
+          searchPlaceholder="Tìm kiếm lệnh, dự án, agent…"
           onToggleTheme={toggleTheme}
           onOpenSearch={openCommandPalette}
           onOpenSettings={() => navigate('/settings')}
         />
 
         <HomeHero
-          greeting={`Welcome back, ${viewModel.greetingName}`}
+          greeting={`Chào mừng trở lại, ${viewModel.greetingName}`}
+          identityLine={PRODUCT_HERO}
           subtitle={viewModel.heroSubtitle}
           primaryCta={{
-            label: 'New Workspace',
+            label: 'Không gian làm việc mới',
             onClick: () => setShowCreateDialog(true),
           }}
           secondaryCta={{
-            label: 'Explore Marketplace',
+            label: 'Khám phá Chợ',
             onClick: () => navigate('/marketplace'),
           }}
           planLine={
-            <p className="w-full text-xs text-[var(--text-muted)] sm:w-auto sm:ml-1">
-              <span>{viewModel.planLabel} Plan</span>
+            <p className="w-full text-[12px] text-white/50 sm:w-auto sm:ml-1">
+              <span className="font-medium text-white/80">{viewModel.planLabel} Plan</span>
               {viewModel.showUpgrade && (
                 <>
                   <span aria-hidden="true"> · </span>
                   <button
                     type="button"
                     onClick={handleUpgrade}
-                    className="text-[var(--accent-gold,#C9A227)] hover:underline focus-visible:outline-none focus-visible:underline"
+                    className="text-[#F5B942] hover:underline focus-visible:outline-none focus-visible:underline"
                   >
-                    Upgrade
+                    Nâng cấp
                   </button>
                 </>
               )}
-              {viewModel.environment !== 'production' && (
+              {isDemo && (
                 <>
                   <span aria-hidden="true"> · </span>
-                  <span className="text-[var(--accent-gold,#C9A227)] uppercase tracking-wide text-[10px] font-semibold">
-                    {viewModel.environment}
-                  </span>
+                  <span className="home-badge-demo align-middle">Demo</span>
                 </>
               )}
             </p>
@@ -308,141 +313,161 @@ export default function Home() {
         <section aria-labelledby="home-quick-actions">
           <HomeSectionHeader
             id="home-quick-actions"
-            title="Quick start"
-            subtitle="Actions wired to existing studio routes and dialogs"
+            title="Bắt đầu nhanh"
+            subtitle="Hành động gắn với route / dialog thật"
           />
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+          <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-5">
             <HomeQuickAction
               icon={<FolderPlus size={20} weight="duotone" />}
-              title="New Workspace"
-              description="Create a project from a template"
+              title="Tạo Workspace mới"
+              description="Tạo dự án từ template"
               onClick={() => setShowCreateDialog(true)}
               badge={!canMutate ? 'Demo' : undefined}
+              accent="violet"
             />
             <HomeQuickAction
               icon={<Sparkle size={20} weight="duotone" />}
-              title="Create App"
-              description="Browse and install Marketplace apps"
+              title="Tạo ứng dụng mới"
+              description="Cài app từ Marketplace"
               onClick={() => navigate('/marketplace?type=app')}
+              accent="gold"
             />
             <HomeQuickAction
-              icon={<MoodyFace size={20} animate trackPointer className="text-[var(--primary)]" />}
-              title="Create Agent"
-              description="Open Agents or start @agent-builder"
+              icon={<MoodyFace size={20} animate trackPointer className="text-[#C4B5FD]" />}
+              title="Tạo Agent"
+              description="Mở Agents / @agent-builder"
               onClick={() =>
                 navigate('/chat', { state: { landingPrompt: '@agent-builder ' } })
               }
+              accent="mint"
             />
             <HomeQuickAction
               icon={<GitBranch size={20} weight="duotone" />}
               title="Import Project"
-              description="Clone from GitHub, GitLab, or Bitbucket"
+              description="Clone GitHub / GitLab / Bitbucket"
               onClick={() => setShowImportDialog(true)}
               badge={!canMutate ? 'Demo' : undefined}
+              accent="violet"
             />
             <HomeQuickAction
               icon={<Storefront size={20} weight="duotone" />}
-              title="Marketplace"
-              description="Templates, skills, connectors, apps"
+              title="Khám phá Marketplace"
+              description="Templates, skills, connectors"
               onClick={() => navigate('/marketplace')}
+              accent="gold"
             />
           </div>
-          <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div className="mt-2.5 grid grid-cols-1 gap-2.5 sm:grid-cols-2">
             <button
               type="button"
               onClick={() => navigate('/apps/installed')}
-              className="flex items-center gap-3 rounded-2xl border border-[var(--border)] studio-surface px-4 py-3 text-left transition hover:border-[var(--border-hover)] hover:bg-[var(--surface-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)]"
+              className="home-card home-card-interactive flex items-center gap-3 px-3.5 py-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7C3AED]"
             >
-              <SquaresFour size={18} className="text-[var(--primary)]" />
-              <span className="min-w-0">
-                <span className="block text-sm font-semibold text-[var(--text)]">My Apps</span>
-                <span className="block text-[11px] text-[var(--text-muted)]">
-                  Installed apps in your workspaces
-                </span>
+              <span className="home-icon-well h-9 w-9">
+                <SquaresFour size={18} />
               </span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-[13px] font-semibold text-white">Ứng dụng của tôi</span>
+                <span className="block text-[11px] text-white/45">Apps đã cài trong workspace</span>
+              </span>
+              <ArrowRight size={15} className="text-white/35" />
             </button>
             <button
               type="button"
               onClick={() => navigate('/library?tab=mcp_servers')}
-              className="flex items-center gap-3 rounded-2xl border border-[var(--border)] studio-surface px-4 py-3 text-left transition hover:border-[var(--border-hover)] hover:bg-[var(--surface-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)]"
+              className="home-card home-card-interactive flex items-center gap-3 px-3.5 py-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7C3AED]"
             >
-              <Package size={18} className="text-[var(--primary)]" />
-              <span className="min-w-0">
-                <span className="block text-sm font-semibold text-[var(--text)]">Connectors</span>
-                <span className="block text-[11px] text-[var(--text-muted)]">
-                  MCP connectors in your Library
-                </span>
+              <span className="home-icon-well h-9 w-9">
+                <Package size={18} />
               </span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-[13px] font-semibold text-white">Pi Connectors</span>
+                <span className="block text-[11px] text-white/45">MCP trong Library</span>
+              </span>
+              <ArrowRight size={15} className="text-white/35" />
             </button>
           </div>
         </section>
 
-        <div className="grid grid-cols-1 gap-8 xl:grid-cols-12 xl:gap-8">
-          <div className="min-w-0 space-y-8 xl:col-span-8">
+        <div className="grid grid-cols-1 gap-4 xl:grid-cols-12 xl:gap-5">
+          <div className="min-w-0 space-y-5 xl:col-span-8">
+            {/* Projects */}
             <section aria-labelledby="home-recent-projects">
               <HomeSectionHeader
                 id="home-recent-projects"
-                title="Recent projects"
+                title="Dự án gần đây"
                 subtitle={
                   showBadges
-                    ? 'Presentation catalog (demo:) — swap source for Testnet/Production later'
-                    : 'Workspaces from the active data source'
+                    ? 'Catalog presentation — gắn nhãn Demo'
+                    : 'Workspace từ nguồn dữ liệu hiện tại'
                 }
-                action={<HomeSectionLink to="/dashboard">View all</HomeSectionLink>}
+                action={<HomeSectionLink to="/dashboard">Xem tất cả</HomeSectionLink>}
               />
               {viewModel.projects.state === 'loading' ? (
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
                   {[0, 1, 2, 3].map((i) => (
-                    <div
-                      key={i}
-                      className="h-[5.25rem] animate-pulse rounded-2xl border border-[var(--border)] bg-[var(--surface)]"
-                    />
+                    <div key={i} className="home-card h-[8.5rem] animate-pulse" />
                   ))}
                 </div>
               ) : viewModel.projects.items.length > 0 ? (
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
                   {viewModel.projects.items.map((p) => (
                     <button
                       key={p.id}
                       type="button"
                       onClick={() => handleOpenProject(p.slug, p.isPresentationData)}
-                      className="group relative flex items-start gap-3 rounded-2xl border border-[var(--border)] bg-[var(--surface)]/80 p-4 text-left transition hover:border-[color-mix(in_srgb,var(--primary)_40%,var(--border))] hover:shadow-[0_0_28px_-16px_rgba(124,58,237,0.55)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)]"
+                      className="home-card home-card-interactive group relative flex flex-col gap-3 p-3.5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7C3AED]"
                       data-presentation={p.isPresentationData ? 'true' : 'false'}
                     >
-                      {p.isPresentationData && (
-                        <span className="absolute right-3 top-3 rounded-full border border-[color-mix(in_srgb,var(--accent-gold,#C9A227)_40%,var(--border))] px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-[var(--accent-gold,#C9A227)]">
-                          Demo
+                      <div className="flex items-start gap-3">
+                        <span className="home-icon-well h-11 w-11 shrink-0">
+                          <Folder size={20} weight="duotone" />
                         </span>
-                      )}
-                      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--primary)]/14 text-[var(--primary)]">
-                        <Folder size={20} weight="duotone" />
-                      </span>
-                      <span className="min-w-0 flex-1 pr-10">
-                        <span className="block truncate text-sm font-semibold text-[var(--text)] group-hover:text-[var(--primary)]">
-                          {p.name}
+                        <span className="min-w-0 flex-1">
+                          <span className="flex items-start justify-between gap-2">
+                            <span className="truncate text-[14px] font-semibold text-white group-hover:text-[#C4B5FD]">
+                              {p.name}
+                            </span>
+                            {p.isPresentationData && <span className="home-badge-demo">Demo</span>}
+                          </span>
+                          <span className="mt-0.5 line-clamp-2 text-[12px] leading-snug text-white/50">
+                            {p.description || p.slug}
+                          </span>
                         </span>
-                        <span className="mt-0.5 block truncate text-[11px] text-[var(--text-muted)]">
-                          {p.slug}
-                        </span>
-                        {p.stackLabels && p.stackLabels.length > 0 && (
-                          <span className="mt-1 flex flex-wrap gap-1">
-                            {p.stackLabels.map((label) => (
-                              <span
-                                key={label}
-                                className="rounded-md border border-[var(--border)] px-1.5 py-0.5 text-[9px] text-[var(--text-muted)]"
-                              >
-                                {label}
-                              </span>
-                            ))}
+                      </div>
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        {p.projectType && (
+                          <span className="rounded-md border border-white/10 bg-white/[0.04] px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white/55">
+                            {p.projectType}
                           </span>
                         )}
-                        <span
-                          className="mt-2 block text-[10px] uppercase tracking-wide text-[var(--text-subtle)]"
-                          title={new Date(p.updatedAt).toLocaleString()}
-                        >
-                          {formatRelativeTime(p.updatedAt) || 'Recently'}
+                        {p.stackLabels?.map((label) => (
+                          <span
+                            key={label}
+                            className="rounded-md border border-[rgba(124,58,237,0.35)] bg-[rgba(124,58,237,0.12)] px-1.5 py-0.5 text-[10px] font-medium text-[#C4B5FD]"
+                          >
+                            {label}
+                          </span>
+                        ))}
+                      </div>
+                      <div className="mt-auto flex items-center justify-between gap-2 border-t border-white/[0.06] pt-2.5">
+                        <span className="flex items-center">
+                          {(p.collaboratorInitials || ['HA']).slice(0, 4).map((ini) => (
+                            <span key={ini} className="home-avatar" title={ini}>
+                              {ini}
+                            </span>
+                          ))}
                         </span>
-                      </span>
+                        <span className="flex items-center gap-2 text-[11px] text-white/40">
+                          {p.statusLabel && (
+                            <span className="inline-flex items-center gap-1 text-[#4ADE80]">
+                              <span className="h-1.5 w-1.5 rounded-full bg-[#22C55E]" />
+                              {p.statusLabel}
+                            </span>
+                          )}
+                          <span>{formatRelativeTime(p.updatedAt) || 'gần đây'}</span>
+                        </span>
+                      </div>
                     </button>
                   ))}
                 </div>
@@ -451,30 +476,26 @@ export default function Home() {
                   icon={<FolderOpen size={20} />}
                   title={projectsCopy.title}
                   description={projectsCopy.description}
-                  actionLabel="New Workspace"
+                  actionLabel="Không gian làm việc mới"
                   onAction={() => setShowCreateDialog(true)}
                 />
               )}
             </section>
 
+            {/* Agents */}
             <section aria-labelledby="home-agents">
               <HomeSectionHeader
                 id="home-agents"
-                title="My Agents"
+                title="Agent của tôi"
                 subtitle={
-                  showBadges
-                    ? 'Presentation agents for UI state coverage'
-                    : 'Agents from the active data source'
+                  showBadges ? 'Agent presentation — không thực thi backend' : 'Agent từ nguồn hiện tại'
                 }
-                action={<HomeSectionLink to="/chat">Open Agents</HomeSectionLink>}
+                action={<HomeSectionLink to="/chat">Mở Agents</HomeSectionLink>}
               />
               {viewModel.agents.state === 'loading' ? (
                 <div className="space-y-2">
                   {[0, 1, 2].map((i) => (
-                    <div
-                      key={i}
-                      className="h-16 animate-pulse rounded-2xl border border-[var(--border)] bg-[var(--surface)]"
-                    />
+                    <div key={i} className="home-card h-[4.25rem] animate-pulse" />
                   ))}
                 </div>
               ) : viewModel.agents.items.length > 0 ? (
@@ -484,10 +505,10 @@ export default function Home() {
                       <button
                         type="button"
                         onClick={() => navigate('/chat')}
-                        className="relative flex w-full items-center gap-3 rounded-2xl border border-[var(--border)] bg-[var(--surface)]/80 px-4 py-3 text-left transition hover:border-[color-mix(in_srgb,var(--primary)_35%,var(--border))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)]"
+                        className="home-card home-card-interactive flex w-full items-center gap-3 px-3.5 py-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7C3AED]"
                         data-presentation={agent.isPresentationData ? 'true' : 'false'}
                       >
-                        <span className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-[var(--primary)]/12 text-lg">
+                        <span className="home-icon-well flex h-11 w-11 shrink-0 items-center justify-center text-lg">
                           {agent.icon && String(agent.icon).startsWith('http') ? (
                             <img src={agent.icon} alt="" className="h-full w-full object-cover" />
                           ) : (
@@ -495,23 +516,27 @@ export default function Home() {
                           )}
                         </span>
                         <span className="min-w-0 flex-1">
-                          <span className="block truncate text-sm font-semibold text-[var(--text)]">
+                          <span className="flex items-center gap-2 truncate text-[14px] font-semibold text-white">
                             {agent.name}
                             {agent.isPresentationData && (
-                              <span className="ml-2 text-[9px] font-bold uppercase tracking-wide text-[var(--accent-gold,#C9A227)]">
-                                Demo
-                              </span>
+                              <span className="home-badge-demo">Demo</span>
                             )}
                           </span>
-                          <span className="block truncate text-xs text-[var(--text-muted)]">
+                          <span className="mt-0.5 block truncate text-[12px] text-white/50">
                             {agent.description || 'Marketplace agent'}
                           </span>
+                          {agent.lastActivityLabel && (
+                            <span className="mt-0.5 block text-[11px] text-white/35">
+                              {agent.lastActivityLabel}
+                            </span>
+                          )}
                         </span>
                         <span
-                          className={`shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-semibold ${agentStatusClass(agent.statusState)}`}
+                          className={`shrink-0 rounded-full border px-2.5 py-1 text-[10px] font-bold tracking-wide ${agentStatusClass(agent.statusState)}`}
                         >
                           {agent.statusLabel}
                         </span>
+                        <ArrowRight size={15} className="hidden text-white/30 sm:block" />
                       </button>
                     </li>
                   ))}
@@ -521,66 +546,64 @@ export default function Home() {
                   icon={<Robot size={20} />}
                   title={agentsCopy.title}
                   description={agentsCopy.description}
-                  actionLabel="Browse Agents"
+                  actionLabel="Duyệt Agents"
                   actionTo="/marketplace?type=agent"
                 />
               )}
             </section>
 
+            {/* Marketplace */}
             <section aria-labelledby="home-marketplace">
               <HomeSectionHeader
                 id="home-marketplace"
-                title="Explore Marketplace"
+                title="Khám phá Marketplace"
                 subtitle={
                   showBadges
-                    ? 'Presentation marketplace cards (not live catalog)'
-                    : 'Preview from the active catalog source'
+                    ? 'Card presentation — không phải số liệu chính thức'
+                    : 'Preview từ catalog hiện tại'
                 }
-                action={<HomeSectionLink to="/marketplace">Marketplace</HomeSectionLink>}
+                action={<HomeSectionLink to="/marketplace">Chợ</HomeSectionLink>}
               />
               {viewModel.marketplace.state === 'loading' ? (
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
                   {[0, 1, 2, 3].map((i) => (
-                    <div
-                      key={i}
-                      className="h-36 animate-pulse rounded-2xl border border-[var(--border)] bg-[var(--surface)]"
-                    />
+                    <div key={i} className="home-card h-44 animate-pulse" />
                   ))}
                 </div>
               ) : viewModel.marketplace.items.length > 0 ? (
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
                   {viewModel.marketplace.items.map((item) => (
                     <Link
                       key={`${item.kind}-${item.id}`}
                       to={item.href}
-                      className="group relative rounded-2xl border border-[var(--border)] bg-[var(--surface)]/80 p-4 transition hover:-translate-y-0.5 hover:border-[color-mix(in_srgb,var(--primary)_40%,var(--border))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)]"
+                      className="home-card home-card-interactive group relative flex min-h-[11rem] flex-col p-3.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7C3AED]"
                       data-presentation={item.isPresentationData ? 'true' : 'false'}
                     >
                       {item.isPresentationData && (
-                        <span className="absolute right-3 top-3 rounded-full border border-[color-mix(in_srgb,var(--accent-gold,#C9A227)_40%,var(--border))] px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-[var(--accent-gold,#C9A227)]">
-                          Demo
-                        </span>
+                        <span className="home-badge-demo absolute right-2.5 top-2.5">Demo</span>
                       )}
-                      <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--primary)]/14 text-[var(--primary)]">
+                      <div className="home-icon-well mb-2.5 h-10 w-10">
                         {item.kind === 'agent' ? (
                           <Robot size={20} />
                         ) : item.kind === 'skill' ? (
                           <Sparkle size={20} />
+                        ) : item.kind === 'template' ? (
+                          <Cube size={20} />
                         ) : (
-                          <Package size={20} />
+                          <Code size={20} />
                         )}
                       </div>
-                      <p className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">
-                        {item.kind}
+                      <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-[#A78BFA]">
+                        {item.categoryLabel || item.kind}
                       </p>
-                      <p className="line-clamp-1 text-sm font-semibold text-[var(--text)] group-hover:text-[var(--primary)]">
+                      <p className="mt-1 line-clamp-1 text-[13px] font-semibold text-white group-hover:text-[#C4B5FD]">
                         {item.name}
                       </p>
-                      <p className="mt-1 line-clamp-2 text-xs text-[var(--text-muted)]">
+                      <p className="mt-1 line-clamp-2 flex-1 text-[11px] leading-relaxed text-white/50">
                         {item.description || '—'}
                       </p>
                       {item.ratingLabel && (
-                        <p className="mt-2 text-[10px] text-[var(--accent-gold,#C9A227)]">
+                        <p className="mt-2 text-[11px] font-medium text-[#F5B942]">
                           {item.ratingLabel}
                         </p>
                       )}
@@ -592,16 +615,17 @@ export default function Home() {
                   icon={<Storefront size={20} />}
                   title={marketplaceCopy.title}
                   description={marketplaceCopy.description}
-                  actionLabel="Open Marketplace"
+                  actionLabel="Mở Marketplace"
                   actionTo="/marketplace"
                 />
               )}
             </section>
           </div>
 
-          <aside className="min-w-0 space-y-6 xl:col-span-4">
+          {/* Right rail */}
+          <aside className="min-w-0 space-y-3 xl:col-span-4">
             <HomeSystemStatusPanel
-              title="System status"
+              title="Trạng thái hệ thống"
               footnote={viewModel.systemStatusFootnote}
               items={viewModel.systemStatus.map((s) => ({
                 id: s.id,
@@ -613,76 +637,77 @@ export default function Home() {
 
             <HomePiBalancePanel {...viewModel.piBalance} />
 
-            <section
-              aria-labelledby="home-activity"
-              className="rounded-2xl border border-[var(--border)] studio-surface p-4 sm:p-5"
-            >
+            <section aria-labelledby="home-activity" className="home-rail-card p-4">
               <h2
                 id="home-activity"
-                className="text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)]"
+                className="font-heading text-[14px] font-semibold text-white"
               >
-                Recent activity
+                Hoạt động gần đây
               </h2>
-              <p className="mt-1 mb-4 text-[11px] text-[var(--text-subtle)]">
+              <p className="mt-1 mb-3 text-[11px] text-white/40">
                 {showBadges
-                  ? 'Presentation activity timeline (demo data).'
-                  : 'Summary from the active data source.'}
+                  ? 'Timeline presentation (demo data).'
+                  : 'Tóm tắt từ nguồn dữ liệu hiện tại.'}
               </p>
               {viewModel.activity.state === 'loading' ? (
                 <div className="space-y-2">
                   {[0, 1, 2].map((i) => (
-                    <div key={i} className="h-8 animate-pulse rounded-lg bg-[var(--surface)]" />
+                    <div key={i} className="h-9 animate-pulse rounded-lg bg-white/5" />
                   ))}
                 </div>
               ) : viewModel.activity.items.length > 0 ? (
-                <ul className="space-y-3">
+                <ul className="space-y-2.5">
                   {viewModel.activity.items.map((item) => (
-                    <li key={item.id} className="flex gap-3">
-                      <div className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-[var(--primary)]" />
-                      <div className="min-w-0">
-                        <p className="truncate text-xs text-[var(--text)]">
+                    <li
+                      key={item.id}
+                      className="flex gap-2.5 rounded-lg border border-white/[0.05] bg-black/20 px-2.5 py-2"
+                    >
+                      <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[rgba(124,58,237,0.2)] text-[12px] text-[#C4B5FD]">
+                        {item.icon || '●'}
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="flex items-center gap-1.5 truncate text-[12px] font-medium text-white">
                           {item.title}
                           {item.isPresentationData && (
-                            <span className="ml-1 text-[9px] font-bold uppercase text-[var(--accent-gold,#C9A227)]">
-                              Demo
-                            </span>
+                            <span className="home-badge-demo">Demo</span>
                           )}
-                        </p>
+                        </span>
                         {item.detail && (
-                          <p className="truncate text-[10px] text-[var(--text-muted)]">
+                          <span className="mt-0.5 block truncate text-[11px] text-white/45">
                             {item.detail}
-                          </p>
+                          </span>
                         )}
-                        <p className="text-[10px] text-[var(--text-muted)]">
-                          {formatRelativeTime(item.at) || '—'}
-                        </p>
-                      </div>
+                        <span className="mt-0.5 flex items-center justify-between gap-2 text-[10px] text-white/35">
+                          <span>{formatRelativeTime(item.at) || '—'}</span>
+                          {item.statusLabel && <span>{item.statusLabel}</span>}
+                        </span>
+                      </span>
                     </li>
                   ))}
                 </ul>
               ) : (
-                <p className="text-xs leading-relaxed text-[var(--text-muted)]">
+                <p className="text-[12px] text-white/45">
                   {viewModel.activity.state === 'unavailable'
-                    ? 'Activity feed unavailable for this environment.'
-                    : 'Nothing to show yet.'}
+                    ? 'Activity chưa khả dụng.'
+                    : 'Chưa có hoạt động.'}
                 </p>
               )}
             </section>
 
-            <div className="rounded-2xl border border-[var(--border)] studio-surface p-4">
-              <p className="text-xs font-semibold text-[var(--text)] mb-1">{PRODUCT_NAME}</p>
-              <p className="mb-3 text-[11px] leading-relaxed text-[var(--text-muted)]">
-                Data environment:{' '}
-                <span className="font-semibold uppercase text-[var(--accent-gold,#C9A227)]">
+            <div className="home-rail-card p-3.5">
+              <p className="text-[12px] font-semibold text-white mb-1">{PRODUCT_NAME}</p>
+              <p className="mb-2.5 text-[11px] leading-relaxed text-white/45">
+                Môi trường dữ liệu:{' '}
+                <span className="font-semibold uppercase text-[#F5B942]">
                   {viewModel.environment}
                 </span>
-                . Swap the Home data source later for Pi Testnet without redesigning this UI.
+                . Có thể đổi sang Pi Testnet sau mà không redesign UI.
               </p>
               <Link
                 to="/settings"
-                className="inline-flex text-xs font-semibold text-[var(--primary)] hover:underline focus-visible:outline-none focus-visible:underline"
+                className="inline-flex text-[12px] font-semibold text-[#C4B5FD] hover:text-white focus-visible:outline-none focus-visible:underline"
               >
-                Open Settings
+                Mở Cài đặt
               </Link>
             </div>
           </aside>
@@ -690,11 +715,12 @@ export default function Home() {
 
         <HomeIdentityCta
           title={PRODUCT_HERO}
-          subtitle={`${PRODUCT_NAME} — an AI developer platform for the Pi ecosystem.`}
-          primaryLabel="Create workspace"
+          subtitle={`${PRODUCT_NAME} — xây dựng với AI, dành cho hệ sinh thái Pi.`}
+          primaryLabel="Không gian làm việc mới"
           onPrimary={() => setShowCreateDialog(true)}
-          secondaryLabel="Explore Marketplace"
+          secondaryLabel="Khám phá Chợ"
           onSecondary={() => navigate('/marketplace')}
+          metrics={demoSafeMetrics}
         />
       </div>
 
