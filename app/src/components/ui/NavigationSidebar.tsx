@@ -735,6 +735,13 @@ export function NavigationSidebar({
         {/* Standard Navigation Items — hidden in builder mode */}
         {activePage !== 'builder' && (
           <>
+            {isExpanded && (
+              <div className="px-2 pt-1 pb-1">
+                <span className="text-[9px] font-semibold uppercase tracking-[0.12em] text-[var(--text-subtle)]">
+                  Studio
+                </span>
+              </div>
+            )}
             <Tooltip content="Home" shortcut={`${modKey} H`} side="right" delay={200}>
               <button
                 onClick={() => navigate('/home')}
@@ -918,7 +925,50 @@ export function NavigationSidebar({
               )}
             </div>
 
-            {/* Feedback and Docs moved to HelpMenu (sidebar "?" button) */}
+            {/* Resources — real Library routes only (no invented destinations) */}
+            {isExpanded && (
+              <div className="px-2 pt-3 pb-1">
+                <span className="text-[9px] font-semibold uppercase tracking-[0.12em] text-[var(--text-subtle)]">
+                  Library & tools
+                </span>
+              </div>
+            )}
+            {isExpanded && (
+              <div className="flex flex-col gap-0.5 mb-1">
+                <button
+                  type="button"
+                  onClick={() => navigate('/library?tab=bases')}
+                  className={navButtonClass(activeLibraryTab === 'bases')}
+                >
+                  <Rocket size={16} className={iconClass(activeLibraryTab === 'bases')} />
+                  <span className={labelClass(activeLibraryTab === 'bases')}>Templates</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => navigate('/library?tab=mcp_servers')}
+                  className={navButtonClass(activeLibraryTab === 'mcp_servers')}
+                >
+                  <Plug size={16} className={iconClass(activeLibraryTab === 'mcp_servers')} />
+                  <span className={labelClass(activeLibraryTab === 'mcp_servers')}>Connectors</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => navigate('/library?tab=skills')}
+                  className={navButtonClass(activeLibraryTab === 'skills')}
+                >
+                  <Zap size={16} className={iconClass(activeLibraryTab === 'skills')} />
+                  <span className={labelClass(activeLibraryTab === 'skills')}>Skills</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => navigate('/feedback')}
+                  className={navButtonClass(activePage === 'feedback')}
+                >
+                  <MessageSquare size={16} className={iconClass(activePage === 'feedback')} />
+                  <span className={labelClass(activePage === 'feedback')}>Feedback</span>
+                </button>
+              </div>
+            )}
 
             {/* Projects-as-folders tree: every chat (standalone or project-scoped)
                 is findable here. "+" creates a new project (= new folder). */}

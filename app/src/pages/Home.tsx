@@ -1,25 +1,40 @@
-import { useState, useEffect, useMemo, useCallback, useRef, type ReactNode } from 'react';
-import { createPortal } from 'react-dom';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { AnimatePresence, motion } from 'framer-motion';
 import {
   FolderPlus,
   GitBranch,
   SquaresFour,
   Folder,
   FolderOpen,
-  ArrowRight,
   Plus,
+  Package,
+  Storefront,
+  Robot,
+  Sparkle,
 } from '@phosphor-icons/react';
 import { MoodyFace } from '../components/ui/MoodyFace';
 import { CreateProjectModal, RepoImportModal } from '../components/modals';
-import { ChannelsCard } from '../components/channels/ChannelsCard';
-import { projectsApi, tasksApi } from '../lib/api';
+import { projectsApi, tasksApi, marketplaceApi } from '../lib/api';
 import { useTeam } from '../contexts/TeamContext';
 import { useAuth } from '../contexts/AuthContext';
-import { StudioPageHero } from '../components/ui/StudioSurface';
-import { PRODUCT_HERO, PRODUCT_HERO_SUPPORT, PRODUCT_NAME } from '../lib/branding';
+import { useTheme } from '../theme/ThemeContext';
+import { isLocalDemoModeActive } from '../lib/localDemoMode';
+import {
+  PRODUCT_HERO,
+  PRODUCT_HERO_SUPPORT,
+  PRODUCT_NAME,
+} from '../lib/branding';
+import {
+  HomeTopBar,
+  HomeHero,
+  HomeSectionHeader,
+  HomeQuickAction,
+  HomeEmptyState,
+  HomeIdentityCta,
+  HomeSystemStatusPanel,
+  HomeSectionLink,
+} from '../components/home/HomeStudioParts';
 
 type RecentProject = {
   id: string;
@@ -28,8 +43,20 @@ type RecentProject = {
   updatedAt: string;
 };
 
-// Relative time helper — "2h ago", "3d ago", etc.
-// Uses Intl.RelativeTimeFormat so it respects the browser locale.
+type AgentRow = {
+  id: string;
+  name: string;
+  description?: string | null;
+  icon?: string | null;
+};
+
+type PreviewItem = {
+  id: string;
+  name: string;
+  description?: string | null;
+  kind: 'template' | 'skill' | 'agent';
+};
+
 const RELATIVE_UNITS: Array<[Intl.RelativeTimeFormatUnit, number]> = [
   ['year', 60 * 60 * 24 * 365],
   ['month', 60 * 60 * 24 * 30],
@@ -48,374 +75,58 @@ function formatRelativeTime(iso: string): string {
   const formatter = new Intl.RelativeTimeFormat(undefined, { numeric: 'auto', style: 'short' });
   for (const [unit, secondsInUnit] of RELATIVE_UNITS) {
     if (Math.abs(deltaSec) >= secondsInUnit || unit === 'second') {
-      const value = Math.round(deltaSec / secondsInUnit);
-      return formatter.format(value, unit);
+      return formatter.format(Math.round(deltaSec / secondsInUnit), unit);
     }
   }
   return '';
 }
 
-interface ActionCardProps {
-  icon: ReactNode;
-  title: string;
-  tooltip: string;
-  onClick?: () => void;
-  disabled?: boolean;
-  badge?: string;
-}
-
-function ActionCard({ icon, title, tooltip, onClick, disabled, badge }: ActionCardProps) {
-  const buttonRef = useRef<HTMLButtonElement>(null);
-  const showTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [visible, setVisible] = useState(false);
-  const [tipPos, setTipPos] = useState({ top: 0, left: 0 });
-
-  const computePosition = () => {
-    if (!buttonRef.current) return;
-    const rect = buttonRef.current.getBoundingClientRect();
-    setTipPos({ top: rect.top - 10, left: rect.left + rect.width / 2 });
-  };
-
-  const handleEnter = () => {
-    if (showTimerRef.current) clearTimeout(showTimerRef.current);
-    showTimerRef.current = setTimeout(() => {
-      computePosition();
-      setVisible(true);
-    }, 250);
-  };
-
-  const handleLeave = () => {
-    if (showTimerRef.current) {
-      clearTimeout(showTimerRef.current);
-      showTimerRef.current = null;
+function unwrapList(data: unknown): Array<Record<string, unknown>> {
+  if (Array.isArray(data)) return data as Array<Record<string, unknown>>;
+  if (data && typeof data === 'object') {
+    const obj = data as Record<string, unknown>;
+    for (const key of ['items', 'agents', 'bases', 'skills', 'results', 'data']) {
+      if (Array.isArray(obj[key])) return obj[key] as Array<Record<string, unknown>>;
     }
-    setVisible(false);
-  };
-
-  useEffect(() => {
-    return () => {
-      if (showTimerRef.current) clearTimeout(showTimerRef.current);
-    };
-  }, []);
-
-  return (
-    <>
-      <button
-        ref={buttonRef}
-        type="button"
-        onClick={disabled ? undefined : onClick}
-        onMouseEnter={handleEnter}
-        onMouseLeave={handleLeave}
-        onFocus={() => {
-          computePosition();
-          setVisible(true);
-        }}
-        onBlur={handleLeave}
-        disabled={disabled}
-        aria-disabled={disabled || undefined}
-        aria-label={`${title}: ${tooltip}`}
-        className={[
-          'group relative flex h-full w-full min-h-[84px] sm:min-h-[92px] flex-col items-start justify-between gap-2',
-          'rounded-[var(--radius)] px-3 py-3 sm:px-3.5 sm:py-3.5 text-left',
-          'motion-safe:transition-colors',
-          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)] focus-visible:ring-offset-2',
-          'focus-visible:ring-offset-[var(--bg)]',
-          disabled
-            ? 'cursor-not-allowed studio-surface border border-[var(--border)] opacity-60'
-            : 'cursor-pointer studio-surface border border-[var(--border)] hover:border-[var(--border-hover)] hover:bg-[var(--surface-hover)]',
-        ].join(' ')}
-      >
-        {badge && (
-          <span className="absolute right-2.5 top-2.5 rounded-full bg-[var(--bg)] px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-[var(--text-muted)]">
-            {badge}
-          </span>
-        )}
-        <div
-          className={[
-            'flex h-7 w-7 items-center justify-center',
-            disabled
-              ? 'text-[var(--text-subtle)]'
-              : 'text-[var(--text-muted)] group-hover:text-[var(--primary)] motion-safe:transition-colors',
-          ].join(' ')}
-        >
-          {icon}
-        </div>
-        <span className="text-sm font-semibold text-[var(--text)]">{title}</span>
-      </button>
-      {createPortal(
-        <AnimatePresence>
-          {visible && (
-            <motion.div
-              role="tooltip"
-              initial={{ opacity: 0, y: 4, scale: 0.96 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.96 }}
-              transition={{ type: 'spring', stiffness: 600, damping: 25, mass: 0.4 }}
-              transformTemplate={(_, generated) => `translate(-50%, -100%) ${generated}`}
-              className="pointer-events-none fixed z-[9999]"
-              style={{
-                top: `${tipPos.top}px`,
-                left: `${tipPos.left}px`,
-              }}
-            >
-              <div className="relative max-w-[240px] rounded-md border border-[var(--border-hover)] bg-black px-2.5 py-1.5 text-center shadow-[var(--shadow-large)]">
-                <span className="text-[11px] font-medium leading-snug text-white">{tooltip}</span>
-                <span
-                  aria-hidden="true"
-                  className="absolute left-1/2 top-full h-0 w-0 -translate-x-1/2 border-l-[5px] border-r-[5px] border-t-[5px] border-l-transparent border-r-transparent border-t-black"
-                />
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>,
-        document.body
-      )}
-    </>
-  );
-}
-
-interface SplitActionCardProps {
-  icon: ReactNode;
-  title: string;
-  tooltip: string;
-  onClick?: () => void;
-  secondaryIcon: ReactNode;
-  secondaryTooltip: string;
-  secondaryAriaLabel: string;
-  onSecondaryClick?: () => void;
-}
-
-// Two-pane variant of ActionCard: a wide primary half and a narrow secondary
-// half divided by a hairline. Each half hovers, focuses, and tooltips
-// independently while sharing one rounded surface so they read as a single card.
-function SplitActionCard({
-  icon,
-  title,
-  tooltip,
-  onClick,
-  secondaryIcon,
-  secondaryTooltip,
-  secondaryAriaLabel,
-  onSecondaryClick,
-}: SplitActionCardProps) {
-  const primaryRef = useRef<HTMLButtonElement>(null);
-  const secondaryRef = useRef<HTMLButtonElement>(null);
-  const showTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [activeTooltip, setActiveTooltip] = useState<'primary' | 'secondary' | null>(null);
-  const [tipPos, setTipPos] = useState({ top: 0, left: 0 });
-
-  const showTooltip = (which: 'primary' | 'secondary') => {
-    const ref = which === 'primary' ? primaryRef : secondaryRef;
-    if (!ref.current) return;
-    const rect = ref.current.getBoundingClientRect();
-    setTipPos({ top: rect.top - 10, left: rect.left + rect.width / 2 });
-    setActiveTooltip(which);
-  };
-
-  const handleEnter = (which: 'primary' | 'secondary') => () => {
-    if (showTimerRef.current) clearTimeout(showTimerRef.current);
-    showTimerRef.current = setTimeout(() => showTooltip(which), 250);
-  };
-
-  const handleLeave = () => {
-    if (showTimerRef.current) {
-      clearTimeout(showTimerRef.current);
-      showTimerRef.current = null;
-    }
-    setActiveTooltip(null);
-  };
-
-  useEffect(() => {
-    return () => {
-      if (showTimerRef.current) clearTimeout(showTimerRef.current);
-    };
-  }, []);
-
-  const tooltipText = activeTooltip === 'secondary' ? secondaryTooltip : tooltip;
-
-  return (
-    <>
-      <div className="flex h-full w-full overflow-hidden rounded-[var(--radius)] bg-[var(--surface)]">
-        <button
-          ref={primaryRef}
-          type="button"
-          onClick={onClick}
-          onMouseEnter={handleEnter('primary')}
-          onMouseLeave={handleLeave}
-          onFocus={() => showTooltip('primary')}
-          onBlur={handleLeave}
-          aria-label={`${title}: ${tooltip}`}
-          className={[
-            'group relative flex flex-1 min-h-[84px] sm:min-h-[92px] flex-col items-start justify-between gap-2',
-            'px-3 py-3 sm:px-3.5 sm:py-3.5 text-left',
-            'motion-safe:transition-colors cursor-pointer hover:bg-[var(--surface-hover)]',
-            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)] focus-visible:ring-inset',
-          ].join(' ')}
-        >
-          <div className="flex h-7 w-7 items-center justify-center text-[var(--text-muted)] group-hover:text-[var(--primary)] motion-safe:transition-colors">
-            {icon}
-          </div>
-          <span className="text-sm font-semibold text-[var(--text)]">{title}</span>
-        </button>
-
-        <button
-          ref={secondaryRef}
-          type="button"
-          onClick={onSecondaryClick}
-          onMouseEnter={handleEnter('secondary')}
-          onMouseLeave={handleLeave}
-          onFocus={() => showTooltip('secondary')}
-          onBlur={handleLeave}
-          aria-label={secondaryAriaLabel}
-          className={[
-            'group flex w-11 sm:w-12 flex-shrink-0 items-center justify-center',
-            'border-l border-[var(--border)]',
-            'motion-safe:transition-colors cursor-pointer hover:bg-[var(--surface-hover)]',
-            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)] focus-visible:ring-inset',
-          ].join(' ')}
-        >
-          <div className="flex h-7 w-7 items-center justify-center text-[var(--text-muted)] group-hover:text-[var(--primary)] motion-safe:transition-colors">
-            {secondaryIcon}
-          </div>
-        </button>
-      </div>
-      {createPortal(
-        <AnimatePresence>
-          {activeTooltip && (
-            <motion.div
-              role="tooltip"
-              initial={{ opacity: 0, y: 4, scale: 0.96 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.96 }}
-              transition={{ type: 'spring', stiffness: 600, damping: 25, mass: 0.4 }}
-              transformTemplate={(_, generated) => `translate(-50%, -100%) ${generated}`}
-              className="pointer-events-none fixed z-[9999]"
-              style={{
-                top: `${tipPos.top}px`,
-                left: `${tipPos.left}px`,
-              }}
-            >
-              <div className="relative max-w-[240px] rounded-md border border-[var(--border-hover)] bg-black px-2.5 py-1.5 text-center shadow-[var(--shadow-large)]">
-                <span className="text-[11px] font-medium leading-snug text-white">
-                  {tooltipText}
-                </span>
-                <span
-                  aria-hidden="true"
-                  className="absolute left-1/2 top-full h-0 w-0 -translate-x-1/2 border-l-[5px] border-r-[5px] border-t-[5px] border-l-transparent border-r-transparent border-t-black"
-                />
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>,
-        document.body
-      )}
-    </>
-  );
-}
-
-// Monochrome brand logos from Simple Icons CDN. `filter: invert(1)` turns the
-// default black SVG into pure white so every logo reads consistently on the
-// dark sidebar surface regardless of theme preset.
-// Slugs must resolve on cdn.simpleicons.org — Slack + Salesforce were
-// delisted (trademark) in 2024 and rendered as empty circles on the card.
-// Keep categories stable: messaging, CRM, dev-tooling.
-const CONNECTORS: Array<{ name: string; slug: string }> = [
-  { name: 'Linear', slug: 'linear' },
-  { name: 'Discord', slug: 'discord' },
-  { name: 'GitHub', slug: 'github' },
-  { name: 'HubSpot', slug: 'hubspot' },
-  { name: 'Sentry', slug: 'sentry' },
-];
-
-interface ConnectorsCardProps {
-  onClick: () => void;
-}
-
-function ConnectorsCard({ onClick }: ConnectorsCardProps) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-label="Connect your connectors: Linear, Discord, GitHub, HubSpot, Sentry and more"
-      title="Hook your workspace up to Linear, Discord, GitHub, HubSpot, Sentry and more via MCP."
-      className="group relative col-span-2 flex w-full min-h-[72px] items-center gap-3 rounded-[var(--radius)] bg-[var(--surface)] px-3.5 py-3 text-left motion-safe:transition-colors hover:bg-[var(--surface-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)] sm:gap-4 sm:px-4"
-    >
-      {/* Logo row */}
-      <div className="flex flex-shrink-0 items-center -space-x-1.5">
-        {CONNECTORS.map((c, i) => {
-          const url = `https://cdn.simpleicons.org/${c.slug}`;
-          return (
-            <span
-              key={c.slug}
-              className="flex h-7 w-7 items-center justify-center rounded-full bg-[var(--bg)] motion-safe:transition-transform group-hover:scale-[1.03]"
-              style={{ zIndex: CONNECTORS.length - i }}
-              aria-hidden="true"
-            >
-              {/* Mask-image technique: the SVG becomes a silhouette colored by
-                  background-color, so logos inherit --text-muted and match
-                  every other icon on the page across theme presets. */}
-              <span
-                className="block h-3.5 w-3.5 bg-[var(--text-muted)] group-hover:bg-[var(--text)] motion-safe:transition-colors"
-                style={{
-                  maskImage: `url(${url})`,
-                  WebkitMaskImage: `url(${url})`,
-                  maskRepeat: 'no-repeat',
-                  WebkitMaskRepeat: 'no-repeat',
-                  maskSize: 'contain',
-                  WebkitMaskSize: 'contain',
-                  maskPosition: 'center',
-                  WebkitMaskPosition: 'center',
-                }}
-              />
-            </span>
-          );
-        })}
-      </div>
-
-      {/* Text block */}
-      <div className="flex min-w-0 flex-1 flex-col">
-        <span className="text-sm font-semibold text-[var(--text)]">Connect your connectors</span>
-        <span className="truncate text-[11px] text-[var(--text-muted)]">
-          {CONNECTORS.map((c) => c.name).join(' · ')}
-        </span>
-      </div>
-
-      <ArrowRight
-        size={16}
-        className="flex-shrink-0 text-[var(--text-muted)] motion-safe:transition-transform group-hover:translate-x-0.5 group-hover:text-[var(--text)]"
-      />
-    </button>
-  );
+  }
+  return [];
 }
 
 export default function Home() {
   const navigate = useNavigate();
   const { activeTeam, teamSwitchKey } = useTeam();
-  const { user } = useAuth();
-  // Greeting prefers the user's first name if available, otherwise the
-  // full display name. Falls back to "there" so the heading still reads
-  // like a sentence on the very first paint while auth is hydrating.
-  const greetingName = (user?.name?.split(' ')[0] || user?.name || 'there').trim();
+  const { user, authMethod } = useAuth();
+  const { theme, toggleTheme } = useTheme();
+  const demo = authMethod === 'local_demo' || isLocalDemoModeActive();
+
+  const greetingName = (user?.name?.split(' ')[0] || user?.username || user?.name || 'there').trim();
 
   const [recent, setRecent] = useState<RecentProject[]>([]);
   const [recentLoading, setRecentLoading] = useState(true);
+  const [recentFailed, setRecentFailed] = useState(false);
+
+  const [agents, setAgents] = useState<AgentRow[]>([]);
+  const [agentsLoading, setAgentsLoading] = useState(true);
+  const [agentsFailed, setAgentsFailed] = useState(false);
+
+  const [previewItems, setPreviewItems] = useState<PreviewItem[]>([]);
+  const [previewLoading, setPreviewLoading] = useState(true);
 
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showImportDialog, setShowImportDialog] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
 
-  // Subscription / plan line — mirrors NavigationSidebar.tsx:133-135
   const subscriptionTier = activeTeam?.subscription_tier || 'free';
   const tierLabel = useMemo(
     () => subscriptionTier.charAt(0).toUpperCase() + subscriptionTier.slice(1),
-    [subscriptionTier]
+    [subscriptionTier],
   );
   const isPaidPlan = subscriptionTier !== 'free';
 
-  // Load recent projects — mirror NavigationSidebar.tsx:231-268 fetch pattern
   useEffect(() => {
     let cancelled = false;
     setRecentLoading(true);
+    setRecentFailed(false);
     projectsApi
       .getAll(activeTeam?.slug)
       .then((data: unknown) => {
@@ -431,11 +142,14 @@ export default function Home() {
           }))
           .filter((p) => p.slug)
           .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
-          .slice(0, 5);
+          .slice(0, 6);
         setRecent(mapped);
       })
       .catch(() => {
-        if (!cancelled) setRecent([]);
+        if (!cancelled) {
+          setRecent([]);
+          setRecentFailed(true);
+        }
       })
       .finally(() => {
         if (!cancelled) setRecentLoading(false);
@@ -445,11 +159,91 @@ export default function Home() {
     };
   }, [activeTeam?.slug, teamSwitchKey]);
 
-  // Create-project handler — same flow as Dashboard.handleCreateProject.
-  // Duplicated intentionally to keep blast radius to this file (see plan).
+  useEffect(() => {
+    let cancelled = false;
+    setAgentsLoading(true);
+    setAgentsFailed(false);
+    marketplaceApi
+      .getMyAgents()
+      .then((data: unknown) => {
+        if (cancelled) return;
+        const list = unwrapList(data);
+        setAgents(
+          list.slice(0, 6).map((a) => ({
+            id: String(a.id ?? a.slug ?? ''),
+            name: String(a.name ?? 'Agent'),
+            description: (a.description as string) || null,
+            icon: (a.icon as string) || (a.avatar_url as string) || null,
+          })),
+        );
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setAgents([]);
+          setAgentsFailed(true);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setAgentsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    setPreviewLoading(true);
+    Promise.all([
+      marketplaceApi.getAllBases({ limit: 2, sort: 'popular' }).catch(() => null),
+      marketplaceApi.getAllSkills({ limit: 1, sort: 'popular' }).catch(() => null),
+      marketplaceApi.getAllAgents({ limit: 1, sort: 'popular' }).catch(() => null),
+    ])
+      .then(([bases, skills, agentsList]) => {
+        if (cancelled) return;
+        const items: PreviewItem[] = [
+          ...unwrapList(bases)
+            .slice(0, 2)
+            .map((b) => ({
+              id: String(b.id ?? b.slug ?? ''),
+              name: String(b.name ?? 'Template'),
+              description: (b.description as string) || null,
+              kind: 'template' as const,
+            })),
+          ...unwrapList(skills)
+            .slice(0, 1)
+            .map((s) => ({
+              id: String(s.id ?? s.slug ?? ''),
+              name: String(s.name ?? 'Skill'),
+              description: (s.description as string) || null,
+              kind: 'skill' as const,
+            })),
+          ...unwrapList(agentsList)
+            .slice(0, 1)
+            .map((a) => ({
+              id: String(a.id ?? a.slug ?? ''),
+              name: String(a.name ?? 'Agent'),
+              description: (a.description as string) || null,
+              kind: 'agent' as const,
+            })),
+        ].filter((i) => i.id);
+        setPreviewItems(items.slice(0, 4));
+      })
+      .finally(() => {
+        if (!cancelled) setPreviewLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const handleCreateProject = useCallback(
     async (projectName: string, baseId?: string, baseVersion?: string) => {
       if (isCreating) return;
+      if (demo) {
+        toast.error('Local Demo Mode is UI-only — workspace creation requires a backend.');
+        return;
+      }
       setIsCreating(true);
       const creatingToast = toast.loading('Creating workspace...');
       try {
@@ -460,7 +254,7 @@ export default function Home() {
           undefined,
           'main',
           baseId,
-          baseVersion || undefined
+          baseVersion || undefined,
         );
         const project = response.project;
         const taskId = response.task_id;
@@ -492,13 +286,16 @@ export default function Home() {
         setIsCreating(false);
       }
     },
-    [isCreating, navigate]
+    [isCreating, navigate, demo],
   );
 
-  // Clone-repo handler — mirror Dashboard.tsx:1298-… onCreateProject.
   const handleImportRepo = useCallback(
     async (provider: string, repoUrl: string, branch: string, projectName: string) => {
       if (isCreating) return;
+      if (demo) {
+        toast.error('Local Demo Mode is UI-only — importing requires a backend.');
+        return;
+      }
       setIsCreating(true);
       const creatingToast = toast.loading(`Importing from ${provider}...`);
       try {
@@ -508,7 +305,7 @@ export default function Home() {
           provider as 'github' | 'gitlab' | 'bitbucket',
           repoUrl,
           branch,
-          undefined
+          undefined,
         );
         const project = response.project;
         const taskId = response.task_id;
@@ -540,181 +337,447 @@ export default function Home() {
         setIsCreating(false);
       }
     },
-    [isCreating, navigate]
+    [isCreating, navigate, demo],
   );
 
   const handleUpgrade = () => navigate('/settings/team/billing');
   const handleOpenProject = (slug: string) => navigate(`/project/${slug}`);
 
+  const openCommandPalette = () => {
+    window.dispatchEvent(new CustomEvent('tesslate-open-command-palette'));
+  };
+
+  const statusItems = demo
+    ? [
+        { label: 'Local Demo', detail: 'UI preview only · DEV', tone: 'demo' as const },
+        { label: 'AI / Backend', detail: 'Not connected', tone: 'off' as const },
+        { label: 'Pi Network', detail: 'No Pi authentication', tone: 'off' as const },
+        { label: 'Database', detail: 'API unused in demo', tone: 'off' as const },
+      ]
+    : [
+        {
+          label: 'Session',
+          detail: user ? 'Signed in' : 'Signed out',
+          tone: (user ? 'ok' : 'off') as 'ok' | 'off',
+        },
+        {
+          label: 'Workspaces API',
+          detail: recentFailed ? 'Unavailable' : recentLoading ? 'Checking…' : 'Responded',
+          tone: (recentFailed ? 'warn' : recentLoading ? 'off' : 'ok') as 'ok' | 'warn' | 'off',
+        },
+        {
+          label: 'My Agents API',
+          detail: agentsFailed ? 'Unavailable' : agentsLoading ? 'Checking…' : 'Responded',
+          tone: (agentsFailed ? 'warn' : agentsLoading ? 'off' : 'ok') as 'ok' | 'warn' | 'off',
+        },
+        {
+          label: PRODUCT_NAME,
+          detail: PRODUCT_HERO,
+          tone: 'ok' as const,
+        },
+      ];
+
   return (
     <div className="h-full w-full overflow-y-auto studio-app-bg">
-      <div className="mx-auto flex min-h-full w-full max-w-5xl flex-col gap-8 px-4 py-8 sm:px-6 sm:py-10 lg:px-8 lg:py-12">
-        <StudioPageHero
-          eyebrow={PRODUCT_NAME}
-          title={PRODUCT_HERO}
-          subtitle={`${PRODUCT_HERO_SUPPORT} Welcome back, ${greetingName}.`}
-          actions={
-            <>
-              <button
-                type="button"
-                onClick={() => setShowCreateDialog(true)}
-                className="inline-flex items-center justify-center rounded-xl bg-[var(--primary)] px-4 py-2.5 text-sm font-semibold text-white shadow-[0_8px_24px_rgba(124,58,237,0.35)] transition hover:bg-[var(--primary-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)]"
-              >
-                Create your first app
-              </button>
-              <button
-                type="button"
-                onClick={() => navigate('/marketplace')}
-                className="inline-flex items-center justify-center rounded-xl border border-[var(--border-hover)] bg-transparent px-4 py-2.5 text-sm font-semibold text-[var(--text)] transition hover:bg-[var(--surface-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)]"
-              >
-                Explore Marketplace
-              </button>
-              <p className="w-full text-xs text-[var(--text-muted)] sm:w-auto sm:ml-1">
-                <span>{tierLabel} Plan</span>
-                {!isPaidPlan && (
-                  <>
-                    <span aria-hidden="true"> · </span>
-                    <button
-                      type="button"
-                      onClick={handleUpgrade}
-                      className="text-[var(--accent-gold,#C9A227)] hover:underline focus-visible:outline-none focus-visible:underline"
-                    >
-                      Upgrade
-                    </button>
-                  </>
-                )}
-              </p>
-            </>
+      <div className="mx-auto flex min-h-full w-full max-w-[1440px] flex-col gap-8 px-4 py-6 sm:gap-10 sm:px-6 sm:py-8 lg:px-8">
+        <HomeTopBar
+          userName={user?.name || user?.username || 'User'}
+          userSubtitle={demo ? 'Local Demo' : activeTeam?.name || PRODUCT_NAME}
+          theme={theme}
+          searchPlaceholder="Search commands, workspaces, apps…"
+          onToggleTheme={toggleTheme}
+          onOpenSearch={openCommandPalette}
+          onOpenSettings={() => navigate('/settings')}
+        />
+
+        <HomeHero
+          greeting={`Welcome back, ${greetingName}`}
+          subtitle={
+            demo
+              ? `${PRODUCT_HERO_SUPPORT} Local Demo is UI-only — no backend or Pi auth.`
+              : `${PRODUCT_HERO_SUPPORT} Start from a workspace, agent, or the Marketplace.`
+          }
+          primaryCta={{
+            label: 'New Workspace',
+            onClick: () => setShowCreateDialog(true),
+          }}
+          secondaryCta={{
+            label: 'Explore Marketplace',
+            onClick: () => navigate('/marketplace'),
+          }}
+          planLine={
+            <p className="w-full text-xs text-[var(--text-muted)] sm:w-auto sm:ml-1">
+              <span>{tierLabel} Plan</span>
+              {!isPaidPlan && !demo && (
+                <>
+                  <span aria-hidden="true"> · </span>
+                  <button
+                    type="button"
+                    onClick={handleUpgrade}
+                    className="text-[var(--accent-gold,#C9A227)] hover:underline focus-visible:outline-none focus-visible:underline"
+                  >
+                    Upgrade
+                  </button>
+                </>
+              )}
+              {demo && (
+                <>
+                  <span aria-hidden="true"> · </span>
+                  <span className="text-[var(--accent-gold,#C9A227)]">Demo</span>
+                </>
+              )}
+            </p>
           }
         />
 
-        {/* Quick actions */}
-        <section aria-labelledby="quick-actions-heading" className="flex flex-col gap-3">
-          <h2
-            id="quick-actions-heading"
-            className="text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)]"
-          >
-            Quick actions
-          </h2>
-          <div className="grid grid-cols-2 gap-2.5 lg:grid-cols-3">
-            <ActionCard
+        <section aria-labelledby="home-quick-actions">
+          <HomeSectionHeader
+            id="home-quick-actions"
+            title="Quick start"
+            subtitle="Actions wired to existing studio routes and dialogs"
+          />
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+            <HomeQuickAction
               icon={<FolderPlus size={20} weight="duotone" />}
               title="New Workspace"
-              tooltip="Create a fresh workspace. Name it, pick a template, and start building."
+              description="Create a project from a template"
               onClick={() => setShowCreateDialog(true)}
+              badge={demo ? 'Demo' : undefined}
             />
-            <ActionCard
-              icon={<GitBranch size={20} weight="duotone" />}
-              title="Clone Repo"
-              tooltip="Import an existing GitHub, GitLab, or Bitbucket repo as a new workspace."
-              onClick={() => setShowImportDialog(true)}
+            <HomeQuickAction
+              icon={<Sparkle size={20} weight="duotone" />}
+              title="Create App"
+              description="Browse and install Marketplace apps"
+              onClick={() => navigate('/marketplace?type=app')}
             />
-            <ActionCard
-              icon={<SquaresFour size={20} />}
-              title="Apps"
-              tooltip="Install and launch prebuilt apps into your workspace."
-              onClick={() => navigate('/apps/installed')}
-            />
-            <SplitActionCard
+            <HomeQuickAction
               icon={<MoodyFace size={20} animate trackPointer className="text-[var(--primary)]" />}
-              title="Agents"
-              tooltip="Chat with agents to automate workflows in your projects."
-              onClick={() => navigate('/chat')}
-              secondaryIcon={<Plus size={18} weight="bold" />}
-              secondaryTooltip="Build a new custom agent with @agent-builder."
-              secondaryAriaLabel="Create new agent"
-              onSecondaryClick={() =>
+              title="Create Agent"
+              description="Open Agents or start @agent-builder"
+              onClick={() =>
                 navigate('/chat', { state: { landingPrompt: '@agent-builder ' } })
               }
             />
-            <ConnectorsCard onClick={() => navigate('/marketplace/browse/mcp_server')} />
-            <ChannelsCard onClick={() => navigate('/library?tab=channels')} />
+            <HomeQuickAction
+              icon={<GitBranch size={20} weight="duotone" />}
+              title="Import Project"
+              description="Clone from GitHub, GitLab, or Bitbucket"
+              onClick={() => setShowImportDialog(true)}
+              badge={demo ? 'Demo' : undefined}
+            />
+            <HomeQuickAction
+              icon={<Storefront size={20} weight="duotone" />}
+              title="Marketplace"
+              description="Templates, skills, connectors, apps"
+              onClick={() => navigate('/marketplace')}
+            />
+          </div>
+          <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <button
+              type="button"
+              onClick={() => navigate('/apps/installed')}
+              className="flex items-center gap-3 rounded-2xl border border-[var(--border)] studio-surface px-4 py-3 text-left transition hover:border-[var(--border-hover)] hover:bg-[var(--surface-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)]"
+            >
+              <SquaresFour size={18} className="text-[var(--primary)]" />
+              <span className="min-w-0">
+                <span className="block text-sm font-semibold text-[var(--text)]">My Apps</span>
+                <span className="block text-[11px] text-[var(--text-muted)]">
+                  Installed apps in your workspaces
+                </span>
+              </span>
+            </button>
+            <button
+              type="button"
+              onClick={() => navigate('/library?tab=mcp_servers')}
+              className="flex items-center gap-3 rounded-2xl border border-[var(--border)] studio-surface px-4 py-3 text-left transition hover:border-[var(--border-hover)] hover:bg-[var(--surface-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)]"
+            >
+              <Package size={18} className="text-[var(--primary)]" />
+              <span className="min-w-0">
+                <span className="block text-sm font-semibold text-[var(--text)]">Connectors</span>
+                <span className="block text-[11px] text-[var(--text-muted)]">
+                  MCP connectors in your Library
+                </span>
+              </span>
+            </button>
           </div>
         </section>
 
-        {/* Recent Projects — finder-style list */}
-        <section aria-labelledby="recent-projects-heading" className="flex flex-col gap-2">
-            <div className="flex items-center justify-between">
-              <h2
-                id="recent-projects-heading"
-                className="text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)]"
-              >
-                Recent Workspaces
-              </h2>
-              {recent.length > 0 && (
-                <button
-                  type="button"
-                  onClick={() => navigate('/dashboard')}
-                  className="flex items-center gap-1 text-[11px] font-medium text-[var(--text-muted)] hover:text-[var(--text)] focus-visible:outline-none focus-visible:text-[var(--text)]"
-                >
-                  View all
-                  <ArrowRight size={12} />
-                </button>
-              )}
-            </div>
-
-            {recentLoading ? (
-              <div
-                className="studio-surface rounded-[var(--radius)] px-4 py-6 text-center text-xs text-[var(--text-muted)]"
-                role="status"
-                aria-live="polite"
-              >
-                Loading workspaces…
-              </div>
-            ) : recent.length === 0 ? (
-              <div className="studio-surface-elevated flex flex-col items-center gap-2 rounded-[var(--radius)] px-4 py-10 text-center border border-[var(--border)]">
-                <FolderOpen size={28} className="text-[var(--primary)]" />
-                <p className="text-sm font-medium text-[var(--text)]">No workspaces yet</p>
-                <p className="max-w-sm text-xs text-[var(--text-muted)]">
-                  Create a workspace to start building with AI for the Pi ecosystem.
-                </p>
-                <button
-                  type="button"
-                  onClick={() => setShowCreateDialog(true)}
-                  className="mt-2 rounded-lg bg-[var(--primary)] px-3 py-2 text-xs font-semibold text-white hover:bg-[var(--primary-hover)]"
-                >
-                  New Workspace
-                </button>
-              </div>
-            ) : (
-              <ul className="studio-surface flex flex-col overflow-hidden rounded-[var(--radius)] border border-[var(--border)]">
-                {recent.map((p) => (
-                  <li key={p.id}>
+        <div className="grid grid-cols-1 gap-8 xl:grid-cols-12 xl:gap-8">
+          <div className="min-w-0 space-y-8 xl:col-span-8">
+            <section aria-labelledby="home-recent-projects">
+              <HomeSectionHeader
+                id="home-recent-projects"
+                title="Recent projects"
+                subtitle="Workspaces from the projects API when available"
+                action={<HomeSectionLink to="/dashboard">View all</HomeSectionLink>}
+              />
+              {recentLoading ? (
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  {[0, 1, 2, 3].map((i) => (
+                    <div
+                      key={i}
+                      className="h-[5.25rem] animate-pulse rounded-2xl border border-[var(--border)] bg-[var(--surface)]"
+                    />
+                  ))}
+                </div>
+              ) : recent.length > 0 ? (
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  {recent.map((p) => (
                     <button
+                      key={p.id}
                       type="button"
                       onClick={() => handleOpenProject(p.slug)}
-                      className={[
-                        'flex w-full items-center gap-3 px-3 py-2.5 text-left motion-safe:transition-colors',
-                        'hover:bg-[var(--surface-hover)] focus-visible:outline-none focus-visible:bg-[var(--surface-hover)]',
-                      ].join(' ')}
+                      className="group flex items-start gap-3 rounded-2xl border border-[var(--border)] bg-[var(--surface)]/80 p-4 text-left transition hover:border-[color-mix(in_srgb,var(--primary)_40%,var(--border))] hover:shadow-[0_0_28px_-16px_rgba(124,58,237,0.55)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)]"
                     >
-                      <Folder
-                        size={18}
-                        weight="duotone"
-                        className="flex-shrink-0 text-[var(--primary)]"
-                      />
-                      <div className="flex min-w-0 flex-1 flex-col">
-                        <span className="truncate text-sm text-[var(--text)]">{p.name}</span>
-                        <span className="truncate text-[11px] text-[var(--text-subtle)]">
+                      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--primary)]/14 text-[var(--primary)]">
+                        <Folder size={20} weight="duotone" />
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-sm font-semibold text-[var(--text)] group-hover:text-[var(--primary)]">
+                          {p.name}
+                        </span>
+                        <span className="mt-0.5 block truncate text-[11px] text-[var(--text-muted)]">
                           {activeTeam?.slug ? `${activeTeam.slug}/` : ''}
                           {p.slug}
                         </span>
-                      </div>
-                      <span
-                        className="hidden flex-shrink-0 text-[11px] text-[var(--text-muted)] sm:inline"
-                        title={new Date(p.updatedAt).toLocaleString()}
-                      >
-                        {formatRelativeTime(p.updatedAt)}
+                        <span
+                          className="mt-2 block text-[10px] uppercase tracking-wide text-[var(--text-subtle)]"
+                          title={new Date(p.updatedAt).toLocaleString()}
+                        >
+                          {formatRelativeTime(p.updatedAt) || 'Recently'}
+                        </span>
                       </span>
                     </button>
-                  </li>
-                ))}
-              </ul>
-            )}
-        </section>
+                  ))}
+                </div>
+              ) : (
+                <HomeEmptyState
+                  icon={<FolderOpen size={20} />}
+                  title={demo || recentFailed ? 'No workspace data' : 'No workspaces yet'}
+                  description={
+                    demo
+                      ? 'Local Demo does not call the backend — an empty list is expected.'
+                      : recentFailed
+                        ? 'Could not load projects from the API.'
+                        : 'Create a workspace to start building with AI for the Pi ecosystem.'
+                  }
+                  actionLabel="New Workspace"
+                  onAction={() => setShowCreateDialog(true)}
+                />
+              )}
+            </section>
+
+            <section aria-labelledby="home-agents">
+              <HomeSectionHeader
+                id="home-agents"
+                title="My Agents"
+                subtitle="Agents linked to your account when the API returns data"
+                action={<HomeSectionLink to="/chat">Open Agents</HomeSectionLink>}
+              />
+              {agentsLoading ? (
+                <div className="space-y-2">
+                  {[0, 1, 2].map((i) => (
+                    <div
+                      key={i}
+                      className="h-16 animate-pulse rounded-2xl border border-[var(--border)] bg-[var(--surface)]"
+                    />
+                  ))}
+                </div>
+              ) : agents.length > 0 ? (
+                <ul className="space-y-2">
+                  {agents.map((agent) => (
+                    <li key={agent.id}>
+                      <button
+                        type="button"
+                        onClick={() => navigate('/chat')}
+                        className="flex w-full items-center gap-3 rounded-2xl border border-[var(--border)] bg-[var(--surface)]/80 px-4 py-3 text-left transition hover:border-[color-mix(in_srgb,var(--primary)_35%,var(--border))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)]"
+                      >
+                        <span className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-[var(--primary)]/12 text-lg">
+                          {agent.icon && String(agent.icon).startsWith('http') ? (
+                            <img src={agent.icon} alt="" className="h-full w-full object-cover" />
+                          ) : (
+                            agent.icon || '🤖'
+                          )}
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate text-sm font-semibold text-[var(--text)]">
+                            {agent.name}
+                          </span>
+                          <span className="block truncate text-xs text-[var(--text-muted)]">
+                            {agent.description || 'Marketplace agent'}
+                          </span>
+                        </span>
+                        <span className="shrink-0 rounded-full border border-[color-mix(in_srgb,var(--status-success)_35%,var(--border))] bg-[color-mix(in_srgb,var(--status-success)_12%,transparent)] px-2 py-0.5 text-[10px] font-semibold text-[var(--status-success)]">
+                          Ready
+                        </span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <HomeEmptyState
+                  icon={<Robot size={20} />}
+                  title={demo || agentsFailed ? 'No agent data' : 'No agents yet'}
+                  description={
+                    demo
+                      ? 'Local Demo does not load agents from the backend.'
+                      : agentsFailed
+                        ? 'Agents API did not respond.'
+                        : 'Add agents from the Marketplace or create one with @agent-builder.'
+                  }
+                  actionLabel="Browse Agents"
+                  actionTo="/marketplace?type=agent"
+                />
+              )}
+            </section>
+
+            <section aria-labelledby="home-marketplace">
+              <HomeSectionHeader
+                id="home-marketplace"
+                title="Explore Marketplace"
+                subtitle="Preview from catalog APIs (templates / skills / agents)"
+                action={<HomeSectionLink to="/marketplace">Marketplace</HomeSectionLink>}
+              />
+              {previewLoading ? (
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                  {[0, 1, 2, 3].map((i) => (
+                    <div
+                      key={i}
+                      className="h-36 animate-pulse rounded-2xl border border-[var(--border)] bg-[var(--surface)]"
+                    />
+                  ))}
+                </div>
+              ) : previewItems.length > 0 ? (
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                  {previewItems.map((item) => (
+                    <Link
+                      key={`${item.kind}-${item.id}`}
+                      to={
+                        item.kind === 'template'
+                          ? '/marketplace?type=base'
+                          : item.kind === 'skill'
+                            ? '/marketplace?type=skill'
+                            : '/marketplace?type=agent'
+                      }
+                      className="group rounded-2xl border border-[var(--border)] bg-[var(--surface)]/80 p-4 transition hover:-translate-y-0.5 hover:border-[color-mix(in_srgb,var(--primary)_40%,var(--border))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)]"
+                    >
+                      <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--primary)]/14 text-[var(--primary)]">
+                        {item.kind === 'agent' ? (
+                          <Robot size={20} />
+                        ) : item.kind === 'skill' ? (
+                          <Sparkle size={20} />
+                        ) : (
+                          <Package size={20} />
+                        )}
+                      </div>
+                      <p className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">
+                        {item.kind}
+                      </p>
+                      <p className="line-clamp-1 text-sm font-semibold text-[var(--text)] group-hover:text-[var(--primary)]">
+                        {item.name}
+                      </p>
+                      <p className="mt-1 line-clamp-2 text-xs text-[var(--text-muted)]">
+                        {item.description || '—'}
+                      </p>
+                    </Link>
+                  ))}
+                </div>
+              ) : (
+                <HomeEmptyState
+                  icon={<Storefront size={20} />}
+                  title="No marketplace preview"
+                  description={
+                    demo
+                      ? 'Local Demo does not load the catalog — open Marketplace to explore the UI.'
+                      : 'Catalog is empty or the API did not respond.'
+                  }
+                  actionLabel="Open Marketplace"
+                  actionTo="/marketplace"
+                />
+              )}
+            </section>
+          </div>
+
+          <aside className="min-w-0 space-y-6 xl:col-span-4">
+            <HomeSystemStatusPanel
+              title="System status"
+              demoMode={demo}
+              footnote={
+                demo
+                  ? 'Status reflects Local Demo — not production health.'
+                  : 'Based on session and recent API responses on this page — not infrastructure monitoring.'
+              }
+              items={statusItems}
+            />
+
+            <section
+              aria-labelledby="home-activity"
+              className="rounded-2xl border border-[var(--border)] studio-surface p-4 sm:p-5"
+            >
+              <h2
+                id="home-activity"
+                className="text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)]"
+              >
+                Recent activity
+              </h2>
+              <p className="mt-1 mb-4 text-[11px] text-[var(--text-subtle)]">
+                {demo
+                  ? 'No activity feed in Local Demo.'
+                  : 'Summary from workspaces loaded on this page.'}
+              </p>
+              {!demo && recent.length > 0 ? (
+                <ul className="space-y-3">
+                  {recent.slice(0, 5).map((p) => (
+                    <li key={`act-${p.id}`} className="flex gap-3">
+                      <div className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-[var(--primary)]" />
+                      <div className="min-w-0">
+                        <p className="truncate text-xs text-[var(--text)]">Workspace: {p.name}</p>
+                        <p className="text-[10px] text-[var(--text-muted)]">
+                          {formatRelativeTime(p.updatedAt) || '—'}
+                        </p>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-xs leading-relaxed text-[var(--text-muted)]">
+                  {demo
+                    ? 'Demo does not invent an activity timeline.'
+                    : 'Nothing to show yet.'}
+                </p>
+              )}
+            </section>
+
+            <div className="rounded-2xl border border-[color-mix(in_srgb,var(--accent-gold,#C9A227)_28%,var(--border))] bg-[color-mix(in_srgb,var(--accent-gold,#C9A227)_8%,var(--surface))] p-4">
+              <div className="mb-2 flex items-center gap-2">
+                <Plus size={14} className="text-[var(--accent-gold,#C9A227)]" weight="bold" />
+                <p className="text-xs font-semibold text-[var(--text)]">{PRODUCT_NAME}</p>
+              </div>
+              <p className="mb-3 text-[11px] leading-relaxed text-[var(--text-muted)]">
+                {demo
+                  ? 'Upgrades and Pi wallet belong to production flows — not activated in Local Demo.'
+                  : 'Manage team billing and preferences from Settings when you are ready.'}
+              </p>
+              <Link
+                to="/settings"
+                className="inline-flex text-xs font-semibold text-[var(--primary)] hover:underline focus-visible:outline-none focus-visible:underline"
+              >
+                Open Settings
+              </Link>
+            </div>
+          </aside>
+        </div>
+
+        <HomeIdentityCta
+          title={PRODUCT_HERO}
+          subtitle={`${PRODUCT_NAME} — an AI developer platform for the Pi ecosystem.`}
+          primaryLabel="Create workspace"
+          onPrimary={() => setShowCreateDialog(true)}
+          secondaryLabel="Explore Marketplace"
+          onSecondary={() => navigate('/marketplace')}
+        />
       </div>
 
-      {/* Modals */}
       <CreateProjectModal
         isOpen={showCreateDialog}
         onClose={() => setShowCreateDialog(false)}
