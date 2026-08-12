@@ -9,11 +9,14 @@ export default defineConfig({
     host: '0.0.0.0',
     port: 5173,
     strictPort: true,
-    allowedHosts: ['.tesslate.com', 'localhost', '.studio-test.tesslate.com'],
+    // OpenSail assigns dynamic project hostnames (e.g. {slug}-frontend.{domain}).
+    // Allow all hosts so Pi Browser / public preview Host headers are accepted.
+    allowedHosts: true,
     proxy: {
-      // Proxy /api requests to backend
+      // Dev-only proxy — keep `npm run dev` for Testnet E2E (no static dist).
+      // K8s: sibling inject sets VITE_BACKEND_URL=http://dev-backend:8001
+      // Local: falls back to http://localhost:8001
       '/api': {
-        // In container, both frontend and backend are on the same host
         target: process.env.VITE_BACKEND_URL || 'http://localhost:8001',
         changeOrigin: true,
         rewrite: (path) => {

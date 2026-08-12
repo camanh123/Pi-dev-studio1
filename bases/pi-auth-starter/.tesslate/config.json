@@ -5,7 +5,8 @@
       "port": 5173,
       "start": "npm install && npm run dev -- --host 0.0.0.0",
       "env": {
-        "VITE_PI_SDK_SANDBOX": "true"
+        "VITE_PI_SDK_SANDBOX": "true",
+        "CHOKIDAR_USEPOLLING": "true"
       },
       "build": "npm run build",
       "output": "dist",

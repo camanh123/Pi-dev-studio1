@@ -88,9 +88,21 @@ These are **OpenSail/generated-project** values — not official Pi env vars:
 | Variable | Where | Purpose |
 |----------|-------|---------|
 | `VITE_PI_SDK_SANDBOX` | frontend | Maps to `Pi.init({ sandbox })` |
+| `VITE_BACKEND_URL` | frontend (dev proxy) | Vite `/api` → backend; K8s sibling inject `http://dev-backend:8001`; local default `http://localhost:8001` |
 | `PI_API_BASE` | backend | Default `https://api.minepi.com/v2` (allowlisted) |
 
+Auth-only: **no** `PI_SERVER_API_KEY`.
+
 Production authentication must use HTTPS.
+
+## OpenSail Testnet E2E (auth only)
+
+1. Create project from this base; keep Vite **dev** start (preserves `/api` proxy).
+2. Start containers; hit `GET /api/health` on the **frontend** public URL.
+3. Register the **frontend** HTTPS URL in Pi Developer Portal (App Network = **Testnet**).
+4. Sign in with Pi in **Pi Browser** — real `/v2/me` verify; no payments / Mainnet.
+
+See `docs/PI_SETUP.md`.
 
 ## Identity notes
 
