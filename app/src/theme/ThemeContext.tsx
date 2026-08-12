@@ -3,8 +3,12 @@ import {
   loadThemes,
   reloadThemes,
   getThemePreset,
+  hasThemePreset,
   applyThemePreset,
   getThemePresetsByMode,
+  getStoredThemePresetId,
+  storeThemePresetId,
+  resolveHydrationThemeId,
 } from './themePresets';
 import type { Theme } from './themePresets';
 import { usersApi } from '../lib/api';
@@ -35,11 +39,21 @@ interface ThemeProviderProps {
   children: ReactNode;
 }
 
-const DEFAULT_THEME = 'default-dark';
+/**
+ * Initial React state: persisted preference (mode-matched builtin if the
+ * exact preset is not cached yet). API user preference still wins after load.
+ */
+function resolveInitialThemeId(): string {
+  return resolveHydrationThemeId(getStoredThemePresetId());
+}
 
 export function ThemeProvider({ children }: ThemeProviderProps) {
-  const [themePresetId, setThemePresetIdState] = useState<string>(DEFAULT_THEME);
-  const [availablePresets, setAvailablePresets] = useState<Theme[]>([]);
+  const [themePresetId, setThemePresetIdState] = useState<string>(resolveInitialThemeId);
+  const [availablePresets, setAvailablePresets] = useState<Theme[]>(() => {
+    const byMode = getThemePresetsByMode();
+    const seeded = [...byMode.dark, ...byMode.light];
+    return seeded.length > 0 ? seeded : [DEFAULT_FALLBACK_THEME as Theme];
+  });
   const [isLoading, setIsLoading] = useState(true);
   const [loadingState, setLoadingState] = useState<ThemeLoadingState>('idle');
   const [error, setError] = useState<string | null>(null);
@@ -87,19 +101,34 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
           validPresets.length > 0 ? validPresets : [DEFAULT_FALLBACK_THEME as Theme]
         );
 
-        // Then load user's saved theme preference
+        // Preference precedence (unchanged):
+        // 1) Authenticated API theme_preset when valid
+        // 2) localStorage persisted id when present in cache
+        // 3) Keep pre-API hydration state (already applied)
+        let nextId: string | null = null;
         try {
           const prefs = await usersApi.getPreferences();
           if (prefs.theme_preset) {
-            // Verify the theme exists and is valid before setting
             const loadedTheme = getThemePreset(prefs.theme_preset);
-            if (isValidTheme(loadedTheme) && loadedTheme.id === prefs.theme_preset) {
-              setThemePresetIdState(prefs.theme_preset);
+            if (isValidTheme(loadedTheme) && hasThemePreset(prefs.theme_preset)) {
+              nextId = prefs.theme_preset;
             }
           }
         } catch {
-          // If API fails (not authenticated or network error), use default theme silently
-          console.debug('Could not load theme preference from API, using default');
+          // Not authenticated or network error — keep local / hydrated preference
+          console.debug('Could not load theme preference from API, using local storage');
+        }
+
+        if (!nextId) {
+          const stored = getStoredThemePresetId();
+          if (stored && hasThemePreset(stored)) {
+            nextId = stored;
+          }
+        }
+
+        if (nextId) {
+          setThemePresetIdState(nextId);
+          storeThemePresetId(nextId);
         }
 
         setLoadingState('success');
@@ -110,7 +139,12 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
         setLoadingState('error');
 
         // Ensure fallback is available even on error
-        setAvailablePresets([DEFAULT_FALLBACK_THEME as Theme]);
+        const byMode = getThemePresetsByMode();
+        setAvailablePresets(
+          [...byMode.dark, ...byMode.light].length > 0
+            ? [...byMode.dark, ...byMode.light]
+            : [DEFAULT_FALLBACK_THEME as Theme]
+        );
       } finally {
         setIsLoading(false);
       }
@@ -123,8 +157,9 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
   useEffect(() => {
     const onTeamTheme = (e: Event) => {
       const presetId = (e as CustomEvent).detail as string;
-      if (presetId) {
+      if (presetId && hasThemePreset(presetId)) {
         setThemePresetIdState(presetId);
+        storeThemePresetId(presetId);
       }
     };
     window.addEventListener('team-theme-changed', onTeamTheme);
@@ -136,34 +171,15 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
     applyThemePreset(themePreset);
   }, [themePresetId, themePreset]);
 
-  // Toggle between dark and light variant of current theme color
-  const toggleTheme = useCallback(() => {
-    const currentPreset = getThemePreset(themePresetId);
-    const baseName = themePresetId.replace(/-dark$|-light$/, '');
-
-    // Try to find the opposite mode variant
-    const targetMode = currentPreset.mode === 'dark' ? 'light' : 'dark';
-    const targetId = `${baseName}-${targetMode}`;
-
-    // Check if the target theme exists
-    const targetTheme = getThemePreset(targetId);
-    if (targetTheme.id === targetId) {
-      setThemePreset(targetId);
-    } else {
-      // Fallback to default variant of target mode
-      setThemePreset(targetMode === 'dark' ? 'default-dark' : 'default-light');
-    }
-  }, [themePresetId]);
-
   // Set a specific theme preset
   const setThemePreset = useCallback(async (presetId: string) => {
     // Verify the theme exists in cache
     let theme = getThemePreset(presetId);
-    if (theme.id !== presetId) {
+    if (!hasThemePreset(presetId) || theme.id !== presetId) {
       // Theme not in cache — reload from API (handles newly created/forked themes)
       await reloadThemes();
       theme = getThemePreset(presetId);
-      if (theme.id !== presetId) {
+      if (!hasThemePreset(presetId) || theme.id !== presetId) {
         console.warn(`Unknown theme preset: ${presetId}`);
         return;
       }
@@ -173,6 +189,7 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
     }
 
     setThemePresetIdState(presetId);
+    storeThemePresetId(presetId);
 
     // Save to API (non-blocking) - works with both token and cookie-based auth
     try {
@@ -182,6 +199,24 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
       console.debug('Could not save theme to API');
     }
   }, []);
+
+  // Toggle between dark and light variant of current theme color
+  const toggleTheme = useCallback(() => {
+    const currentPreset = getThemePreset(themePresetId);
+    const baseName = themePresetId.replace(/-dark$|-light$/, '');
+
+    // Try to find the opposite mode variant
+    const targetMode = currentPreset.mode === 'dark' ? 'light' : 'dark';
+    const targetId = `${baseName}-${targetMode}`;
+
+    if (hasThemePreset(targetId)) {
+      void setThemePreset(targetId);
+      return;
+    }
+
+    // Fallback to default variant of target mode (always seeded)
+    void setThemePreset(targetMode === 'dark' ? 'default-dark' : 'default-light');
+  }, [themePresetId, setThemePreset]);
 
   // Refresh theme from API (call after login - assumes user is authenticated)
   const refreshUserTheme = useCallback(async () => {
@@ -193,11 +228,9 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
 
       // Load user preference
       const prefs = await usersApi.getPreferences();
-      if (prefs.theme_preset) {
-        const loadedTheme = getThemePreset(prefs.theme_preset);
-        if (loadedTheme.id === prefs.theme_preset) {
-          setThemePresetIdState(prefs.theme_preset);
-        }
+      if (prefs.theme_preset && hasThemePreset(prefs.theme_preset)) {
+        setThemePresetIdState(prefs.theme_preset);
+        storeThemePresetId(prefs.theme_preset);
       }
     } catch {
       console.debug('Could not refresh theme from API');

@@ -1,6 +1,7 @@
 /**
  * Home visual system — presentation only.
  * Color language aligned to Pi Dev Studio reference concept.
+ * Tokens remapped under body.light-mode so theme toggle applies without layout redesign.
  */
 
 .home-studio {
@@ -18,10 +19,30 @@
   --home-radius: 1.05rem;
   --home-border: rgba(124, 58, 237, 0.28);
   --home-glow: 0 0 36px -10px rgba(124, 58, 237, 0.55);
-  color: #f8f7ff;
+  --home-fg: #f8f7ff;
+  --home-fg-muted: rgba(248, 247, 255, 0.7);
+  --home-fg-subtle: rgba(248, 247, 255, 0.45);
+  color: var(--home-fg);
   background:
     radial-gradient(ellipse 55% 40% at 85% 8%, rgba(124, 58, 237, 0.22), transparent 55%),
     radial-gradient(ellipse 40% 30% at 10% 0%, rgba(245, 185, 66, 0.06), transparent 50%),
+    linear-gradient(180deg, var(--home-bg-1) 0%, var(--home-bg-0) 100%);
+}
+
+body.light-mode .home-studio {
+  --home-bg-0: #f3f0ff;
+  --home-bg-1: #f7f5ff;
+  --home-card-0: #ffffff;
+  --home-card-1: #faf8ff;
+  --home-card-2: #f0ecff;
+  --home-border: rgba(124, 58, 237, 0.2);
+  --home-glow: 0 0 28px -10px rgba(124, 58, 237, 0.28);
+  --home-fg: #1a1230;
+  --home-fg-muted: rgba(26, 18, 48, 0.68);
+  --home-fg-subtle: rgba(26, 18, 48, 0.45);
+  background:
+    radial-gradient(ellipse 55% 40% at 85% 8%, rgba(124, 58, 237, 0.12), transparent 55%),
+    radial-gradient(ellipse 40% 30% at 10% 0%, rgba(201, 162, 39, 0.08), transparent 50%),
     linear-gradient(180deg, var(--home-bg-1) 0%, var(--home-bg-0) 100%);
 }
 
@@ -39,12 +60,25 @@
     transform 0.2s ease;
 }
 
+body.light-mode .home-studio .home-card {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.8),
+    0 10px 24px -16px rgba(26, 18, 48, 0.18);
+}
+
 .home-studio .home-card:hover {
   border-color: rgba(147, 51, 234, 0.55);
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.06),
     var(--home-glow),
     0 16px 36px -16px rgba(0, 0, 0, 0.8);
+}
+
+body.light-mode .home-studio .home-card:hover {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    var(--home-glow),
+    0 14px 28px -14px rgba(26, 18, 48, 0.2);
 }
 
 .home-studio .home-card-interactive:hover {
@@ -71,6 +105,13 @@
   box-shadow: 0 0 20px -8px rgba(124, 58, 237, 0.8);
 }
 
+body.light-mode .home-studio .home-icon-well {
+  color: #6d28d9;
+  background:
+    radial-gradient(circle at 30% 25%, rgba(167, 139, 250, 0.35), transparent 55%),
+    rgba(124, 58, 237, 0.1);
+}
+
 .home-studio .home-badge-demo {
   border: 1px solid rgba(245, 185, 66, 0.45);
   color: var(--home-gold);
@@ -90,7 +131,7 @@
   align-items: center;
   justify-content: center;
   border-radius: 999px;
-  border: 1.5px solid #0b0813;
+  border: 1.5px solid var(--home-bg-1);
   background: linear-gradient(135deg, #7c3aed, #4c1d95);
   font-size: 8px;
   font-weight: 700;
@@ -100,6 +141,41 @@
 
 .home-studio .home-avatar:first-child {
   margin-left: 0;
+}
+
+/* Theme-aware text helpers used by Home chrome (no layout change) */
+.home-studio .home-fg {
+  color: var(--home-fg);
+}
+.home-studio .home-fg-muted {
+  color: var(--home-fg-muted);
+}
+.home-studio .home-fg-subtle {
+  color: var(--home-fg-subtle);
+}
+
+/* Soften hardcoded Tailwind whites/blacks in light mode without redesigning structure */
+body.light-mode .home-studio .text-white {
+  color: var(--home-fg) !important;
+}
+body.light-mode .home-studio .text-white\/90 {
+  color: color-mix(in srgb, var(--home-fg) 90%, transparent) !important;
+}
+body.light-mode .home-studio .text-white\/70,
+body.light-mode .home-studio .text-white\/65 {
+  color: var(--home-fg-muted) !important;
+}
+body.light-mode .home-studio .text-white\/55,
+body.light-mode .home-studio .text-white\/45 {
+  color: var(--home-fg-subtle) !important;
+}
+body.light-mode .home-studio .border-white\/15,
+body.light-mode .home-studio .border-white\/10 {
+  border-color: rgba(124, 58, 237, 0.18) !important;
+}
+body.light-mode .home-studio .bg-white\/\[0\.04\],
+body.light-mode .home-studio .bg-black\/30 {
+  background-color: rgba(124, 58, 237, 0.06) !important;
 }
 
 /* —— Pi hero artwork —— */

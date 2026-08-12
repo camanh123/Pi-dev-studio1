@@ -111,6 +111,125 @@ const DEFAULT_FALLBACK_THEME: Theme = {
   },
 };
 
+/** Built-in light fallback — guarantees dark↔light toggle works without API themes. */
+const DEFAULT_FALLBACK_LIGHT_THEME: Theme = {
+  id: 'default-light',
+  name: 'Pi Dev Studio Light',
+  mode: 'light',
+  author: 'Pi Dev Studio',
+  version: '2.0.0',
+  description: 'Pi-inspired light theme for Pi Dev Studio',
+  colors: {
+    primary: '#7C3AED',
+    primaryHover: '#6D28D9',
+    primaryRgb: '124, 58, 237',
+    accent: '#6D28D9',
+    background: '#F7F5FF',
+    surface: '#FFFFFF',
+    surfaceHover: '#EDE9FE',
+    text: '#1A1230',
+    textMuted: 'rgba(26, 18, 48, 0.65)',
+    textSubtle: 'rgba(26, 18, 48, 0.42)',
+    border: 'rgba(124, 58, 237, 0.16)',
+    borderHover: 'rgba(124, 58, 237, 0.32)',
+    sidebar: {
+      background: '#F0ECFF',
+      text: '#1A1230',
+      border: 'rgba(124, 58, 237, 0.14)',
+      hover: 'rgba(124, 58, 237, 0.1)',
+      active: 'rgba(124, 58, 237, 0.18)',
+    },
+    input: {
+      background: '#FFFFFF',
+      border: 'rgba(124, 58, 237, 0.2)',
+      borderFocus: '#7C3AED',
+      text: '#1A1230',
+      placeholder: 'rgba(26, 18, 48, 0.4)',
+    },
+    scrollbar: {
+      thumb: 'rgba(124, 58, 237, 0.28)',
+      thumbHover: 'rgba(124, 58, 237, 0.42)',
+      track: 'transparent',
+    },
+    code: {
+      inlineBackground: 'rgba(124, 58, 237, 0.12)',
+      inlineText: '#6D28D9',
+      blockBackground: '#EDE9FE',
+      blockBorder: 'rgba(124, 58, 237, 0.16)',
+      blockText: '#1A1230',
+    },
+    status: {
+      error: '#ef4444',
+      errorRgb: '239, 68, 68',
+      success: '#16a34a',
+      successRgb: '22, 163, 74',
+      warning: '#c9a227',
+      warningRgb: '201, 162, 39',
+      info: '#6366f1',
+      infoRgb: '99, 102, 241',
+      purple: '#7c3aed',
+      purpleRgb: '124, 58, 237',
+    },
+    shadow: {
+      small: '0 1px 2px rgba(26, 18, 48, 0.08)',
+      medium: '0 8px 24px rgba(26, 18, 48, 0.1)',
+      large: '0 16px 40px rgba(26, 18, 48, 0.14)',
+    },
+  },
+  typography: {
+    fontFamily:
+      "'DM Sans', 'Instrument Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+    fontFamilyHeading: "'Outfit', 'Instrument Sans', -apple-system, BlinkMacSystemFont, sans-serif",
+    fontFamilyMono: "JetBrains Mono, Menlo, Monaco, 'Courier New', monospace",
+    fontSizeBase: '14px',
+    lineHeight: '1.5',
+  },
+  spacing: {
+    radiusSmall: '6px',
+    radiusMedium: '10px',
+    radiusLarge: '14px',
+    radiusXl: '18px',
+  },
+  animation: {
+    durationFast: '150ms',
+    durationNormal: '200ms',
+    durationSlow: '300ms',
+    easing: 'cubic-bezier(0.4, 0, 0.2, 1)',
+  },
+};
+
+const THEME_STORAGE_KEY = 'opensail-theme-preset';
+
+/** Ensure built-in dark + light fallbacks are always available for toggling. */
+function ensureBuiltinFallbacks(): void {
+  if (!themesCache.has(DEFAULT_FALLBACK_THEME.id)) {
+    themesCache.set(DEFAULT_FALLBACK_THEME.id, DEFAULT_FALLBACK_THEME);
+  }
+  if (!themesCache.has(DEFAULT_FALLBACK_LIGHT_THEME.id)) {
+    themesCache.set(DEFAULT_FALLBACK_LIGHT_THEME.id, DEFAULT_FALLBACK_LIGHT_THEME);
+  }
+}
+
+// Seed fallbacks immediately so first paint / toggle never lacks a light variant.
+ensureBuiltinFallbacks();
+
+export function getStoredThemePresetId(): string | null {
+  try {
+    const stored = localStorage.getItem(THEME_STORAGE_KEY);
+    return stored && stored.trim() ? stored.trim() : null;
+  } catch {
+    return null;
+  }
+}
+
+export function storeThemePresetId(presetId: string): void {
+  try {
+    localStorage.setItem(THEME_STORAGE_KEY, presetId);
+  } catch {
+    // Ignore quota / private-mode failures
+  }
+}
+
 // ============================================================================
 // Theme Loading
 // ============================================================================
@@ -137,12 +256,13 @@ export async function loadThemes(): Promise<void> {
       for (const theme of themes) {
         themesCache.set(theme.id, theme);
       }
+      // Always keep builtins so dark↔light toggle cannot soft-fail
+      ensureBuiltinFallbacks();
       themesLoaded = true;
       console.debug(`Loaded ${themes.length} themes from API`);
     } catch (error) {
       console.warn('Failed to load themes from API, using fallback:', error);
-      // Add fallback theme so app still works
-      themesCache.set(DEFAULT_FALLBACK_THEME.id, DEFAULT_FALLBACK_THEME);
+      ensureBuiltinFallbacks();
       themesLoaded = true;
     }
   })();
@@ -202,7 +322,13 @@ export const themePresets: Record<string, Theme> = new Proxy({} as Record<string
  * Get a theme by ID, with fallback to default.
  */
 export function getThemePreset(id: string): Theme {
+  ensureBuiltinFallbacks();
   return themesCache.get(id) || themesCache.get('default-dark') || DEFAULT_FALLBACK_THEME;
+}
+
+/** True when the theme id exists in cache (not a silent fallback). */
+export function hasThemePreset(id: string): boolean {
+  return themesCache.has(id);
 }
 
 /**
@@ -395,10 +521,50 @@ export function applyThemePreset(theme: Theme): void {
   }
 
   // === MODE CLASS ===
+  // body.*-mode: legacy app CSS. html.dark + data-theme: Tailwind darkMode:'class'.
   document.body.classList.remove('light-mode', 'dark-mode');
   document.body.classList.add(`${theme.mode}-mode`);
+
+  root.classList.toggle('dark', theme.mode === 'dark');
+  root.setAttribute('data-theme', theme.mode);
+  root.style.colorScheme = theme.mode;
 
   // Update body styles directly (these are the authoritative values, not CSS overrides)
   if (colors.background) document.body.style.backgroundColor = colors.background;
   if (colors.text) document.body.style.color = colors.text;
+}
+
+/**
+ * Resolve which theme id to apply before API themes are available.
+ * Prefers the exact stored id when already cached; otherwise maps
+ * persisted *-light / *-dark preferences onto builtin fallbacks so the
+ * correct mode paints immediately (no flash).
+ */
+export function resolveHydrationThemeId(stored: string | null): string {
+  ensureBuiltinFallbacks();
+  if (!stored) {
+    return DEFAULT_FALLBACK_THEME.id;
+  }
+  if (themesCache.has(stored)) {
+    return stored;
+  }
+  if (stored.endsWith('-light')) {
+    return DEFAULT_FALLBACK_LIGHT_THEME.id;
+  }
+  if (stored.endsWith('-dark')) {
+    return DEFAULT_FALLBACK_THEME.id;
+  }
+  return DEFAULT_FALLBACK_THEME.id;
+}
+
+/**
+ * Apply the stored (or default) theme before React mounts to avoid mode flicker.
+ * Does not change API precedence — ThemeProvider still resolves user prefs after load.
+ * @returns The theme id that was applied for first paint.
+ */
+export function hydrateThemeFromStorage(): string {
+  const stored = getStoredThemePresetId();
+  const presetId = resolveHydrationThemeId(stored);
+  applyThemePreset(getThemePreset(presetId));
+  return presetId;
 }
