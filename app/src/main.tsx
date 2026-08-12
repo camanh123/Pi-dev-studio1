@@ -3,7 +3,11 @@ import { PostHogProvider } from 'posthog-js/react'
 import { initPostHog } from './lib/posthog'
 import './theme/variables.css'
 import './index.css'
+import { hydrateThemeFromStorage } from './theme/themePresets'
 import App from './App.tsx'
+
+// Apply stored dark/light theme before first paint to avoid mode flicker
+hydrateThemeFromStorage()
 
 // Initialize PostHog once at app startup (singleton pattern)
 const posthogClient = initPostHog()

@@ -36,7 +36,7 @@ export function LocalDemoBanner() {
     >
       <span>LOCAL DEMO MODE</span>
       <span style={{ fontWeight: 500, opacity: 0.85, textTransform: 'none', letterSpacing: 0 }}>
-        UI preview only — no backend
+        UI only — no backend connection
       </span>
     </div>
   );

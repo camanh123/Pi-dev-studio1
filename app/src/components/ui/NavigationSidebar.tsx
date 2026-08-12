@@ -40,6 +40,8 @@ import { useTeam } from '../../contexts/TeamContext';
 import { modKey } from '../../lib/keyboard-registry';
 import type { CreditBalanceResponse } from '../../types/billing';
 import { usePendingApprovals } from '../../hooks/usePendingApprovals';
+import { PiDevStudioWordmark, PiDevStudioMark } from './PiDevStudioMark';
+import { PRODUCT_NAME } from '../../lib/branding';
 
 interface NavigationSidebarProps {
   activePage:
@@ -359,26 +361,31 @@ export function NavigationSidebar({
   };
 
   // Shared button class for nav items — rounded-lg, 7px internal padding to keep icons at 18px from wall
+  // Visual polish only: stronger active glow for Pi Dev Studio shell (routes/handlers unchanged).
   const navButtonClass = (isActive: boolean) =>
-    `group flex items-center h-7 w-full transition-colors rounded-lg pl-[7px] pr-[7px] gap-3 ${
-      isActive ? 'bg-[var(--sidebar-active)]' : 'hover:bg-[var(--sidebar-hover)]'
+    `group flex items-center h-8 w-full transition-all duration-200 rounded-lg pl-[7px] pr-[7px] gap-3 ${
+      isActive
+        ? 'bg-[color-mix(in_srgb,var(--primary)_22%,var(--sidebar-active))] shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--primary)_35%,transparent),0_0_18px_-10px_rgba(124,58,237,0.7)]'
+        : 'hover:bg-[var(--sidebar-hover)]'
     }`;
 
   const navButtonClassCollapsed = (isActive: boolean) =>
-    `group flex items-center justify-center h-7 w-full transition-colors rounded-lg ${
-      isActive ? 'bg-[var(--sidebar-active)]' : 'hover:bg-[var(--sidebar-hover)]'
+    `group flex items-center justify-center h-8 w-full transition-all duration-200 rounded-lg ${
+      isActive
+        ? 'bg-[color-mix(in_srgb,var(--primary)_22%,var(--sidebar-active))] shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--primary)_35%,transparent),0_0_18px_-10px_rgba(124,58,237,0.7)]'
+        : 'hover:bg-[var(--sidebar-hover)]'
     }`;
 
   const inactiveNavButton =
-    'group flex items-center h-7 w-full transition-colors rounded-lg pl-[7px] pr-[7px] gap-3 hover:bg-[var(--sidebar-hover)]';
+    'group flex items-center h-8 w-full transition-colors rounded-lg pl-[7px] pr-[7px] gap-3 hover:bg-[var(--sidebar-hover)]';
 
   const inactiveNavButtonCollapsed =
-    'group flex items-center justify-center h-7 w-full transition-colors rounded-lg hover:bg-[var(--sidebar-hover)]';
+    'group flex items-center justify-center h-8 w-full transition-colors rounded-lg hover:bg-[var(--sidebar-hover)]';
 
   const iconClass = (isActive: boolean) =>
     `transition-colors ${
       isActive
-        ? 'text-[var(--sidebar-text)]'
+        ? 'text-[var(--primary)]'
         : 'text-[var(--text-subtle)] group-hover:text-[var(--sidebar-text)]'
     }`;
 
@@ -403,8 +410,40 @@ export function NavigationSidebar({
         duration: 0.25,
         ease: [0.22, 1, 0.36, 1],
       }}
-      className={`${forceVisible ? 'flex' : 'hidden md:flex'} flex-col h-full bg-[var(--sidebar-bg)] overflow-x-hidden`}
+      className={`${forceVisible ? 'flex' : 'hidden md:flex'} flex-col h-full overflow-x-hidden border-r border-[color-mix(in_srgb,var(--primary)_18%,var(--sidebar-border))]`}
+      style={{
+        background:
+          'linear-gradient(180deg, color-mix(in srgb, var(--sidebar-bg) 92%, #7c3aed 8%) 0%, var(--sidebar-bg) 40%, var(--sidebar-bg) 100%)',
+      }}
     >
+      {/* Product brand */}
+      <div
+        className="flex-shrink-0 flex items-center"
+        style={{ padding: isExpanded ? '14px 14px 8px' : '12px 0 6px', justifyContent: isExpanded ? 'flex-start' : 'center' }}
+      >
+        {isExpanded ? (
+          <button
+            type="button"
+            onClick={() => navigate('/home')}
+            className="min-w-0 rounded-[var(--radius-medium)] px-1 py-0.5 hover:bg-[var(--sidebar-hover)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)]"
+            aria-label={`${PRODUCT_NAME} home`}
+          >
+            <PiDevStudioWordmark markSize={28} showTagline />
+          </button>
+        ) : (
+          <Tooltip content={PRODUCT_NAME} side="right" delay={200}>
+            <button
+              type="button"
+              onClick={() => navigate('/home')}
+              className="flex h-8 w-8 items-center justify-center rounded-[var(--radius-medium)] hover:bg-[var(--sidebar-hover)] transition-colors"
+              aria-label={`${PRODUCT_NAME} home`}
+            >
+              <PiDevStudioMark size={24} />
+            </button>
+          </Tooltip>
+        )}
+      </div>
+
       {/* Team Switcher + Collapse toggle — top row */}
       <div
         ref={userDropdownRef}
@@ -527,7 +566,7 @@ export function NavigationSidebar({
                           {team.name}
                         </span>
                         {team.is_personal ? (
-                          <span className="text-[9px] text-[#f89521] flex-shrink-0">Personal</span>
+                          <span className="text-[9px] text-[var(--accent-gold,#C9A227)] flex-shrink-0">Personal</span>
                         ) : team.role === 'admin' ? (
                           <span className="text-[9px] text-[var(--primary)] flex-shrink-0">
                             Admin
@@ -705,6 +744,13 @@ export function NavigationSidebar({
         {/* Standard Navigation Items — hidden in builder mode */}
         {activePage !== 'builder' && (
           <>
+            {isExpanded && (
+              <div className="px-2 pt-1.5 pb-1">
+                <span className="text-[9px] font-semibold uppercase tracking-[0.14em] text-[var(--accent-gold,#C9A227)]">
+                  Studio
+                </span>
+              </div>
+            )}
             <Tooltip content="Home" shortcut={`${modKey} H`} side="right" delay={200}>
               <button
                 onClick={() => navigate('/home')}
@@ -888,7 +934,50 @@ export function NavigationSidebar({
               )}
             </div>
 
-            {/* Feedback and Docs moved to HelpMenu (sidebar "?" button) */}
+            {/* Resources — real Library routes only (no invented destinations) */}
+            {isExpanded && (
+              <div className="px-2 pt-3 pb-1">
+                <span className="text-[9px] font-semibold uppercase tracking-[0.14em] text-[var(--accent-gold,#C9A227)]">
+                  Library & tools
+                </span>
+              </div>
+            )}
+            {isExpanded && (
+              <div className="flex flex-col gap-0.5 mb-1">
+                <button
+                  type="button"
+                  onClick={() => navigate('/library?tab=bases')}
+                  className={navButtonClass(activeLibraryTab === 'bases')}
+                >
+                  <Rocket size={16} className={iconClass(activeLibraryTab === 'bases')} />
+                  <span className={labelClass(activeLibraryTab === 'bases')}>Templates</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => navigate('/library?tab=mcp_servers')}
+                  className={navButtonClass(activeLibraryTab === 'mcp_servers')}
+                >
+                  <Plug size={16} className={iconClass(activeLibraryTab === 'mcp_servers')} />
+                  <span className={labelClass(activeLibraryTab === 'mcp_servers')}>Connectors</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => navigate('/library?tab=skills')}
+                  className={navButtonClass(activeLibraryTab === 'skills')}
+                >
+                  <Zap size={16} className={iconClass(activeLibraryTab === 'skills')} />
+                  <span className={labelClass(activeLibraryTab === 'skills')}>Skills</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => navigate('/feedback')}
+                  className={navButtonClass(activePage === 'feedback')}
+                >
+                  <MessageSquare size={16} className={iconClass(activePage === 'feedback')} />
+                  <span className={labelClass(activePage === 'feedback')}>Feedback</span>
+                </button>
+              </div>
+            )}
 
             {/* Projects-as-folders tree: every chat (standalone or project-scoped)
                 is findable here. "+" creates a new project (= new folder). */}

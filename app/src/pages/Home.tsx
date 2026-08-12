@@ -1,33 +1,40 @@
-import { useState, useEffect, useMemo, useCallback, useRef, type ReactNode } from 'react';
-import { createPortal } from 'react-dom';
-import { useNavigate } from 'react-router-dom';
+import { useState, useCallback } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { AnimatePresence, motion } from 'framer-motion';
 import {
   FolderPlus,
   GitBranch,
   SquaresFour,
   Folder,
   FolderOpen,
+  Package,
+  Storefront,
+  Robot,
+  Sparkle,
   ArrowRight,
-  Plus,
+  Code,
+  Cube,
 } from '@phosphor-icons/react';
 import { MoodyFace } from '../components/ui/MoodyFace';
 import { CreateProjectModal, RepoImportModal } from '../components/modals';
-import { ChannelsCard } from '../components/channels/ChannelsCard';
 import { projectsApi, tasksApi } from '../lib/api';
-import { useTeam } from '../contexts/TeamContext';
-import { useAuth } from '../contexts/AuthContext';
+import { useTheme } from '../theme/ThemeContext';
+import { PRODUCT_HERO, PRODUCT_NAME } from '../lib/branding';
+import { useHomeDashboard } from '../home/useHomeDashboard';
+import type { HomeResourceState } from '../home/types';
+import {
+  HomeTopBar,
+  HomeHero,
+  HomeSectionHeader,
+  HomeQuickAction,
+  HomeEmptyState,
+  HomeIdentityCta,
+  HomeSystemStatusPanel,
+  HomeSectionLink,
+  HomePiBalancePanel,
+} from '../components/home/HomeStudioParts';
+import '../components/home/homeStudio.css';
 
-type RecentProject = {
-  id: string;
-  name: string;
-  slug: string;
-  updatedAt: string;
-};
-
-// Relative time helper — "2h ago", "3d ago", etc.
-// Uses Intl.RelativeTimeFormat so it respects the browser locale.
 const RELATIVE_UNITS: Array<[Intl.RelativeTimeFormatUnit, number]> = [
   ['year', 60 * 60 * 24 * 365],
   ['month', 60 * 60 * 24 * 30],
@@ -43,411 +50,82 @@ function formatRelativeTime(iso: string): string {
   const then = new Date(iso).getTime();
   if (Number.isNaN(then)) return '';
   const deltaSec = Math.round((then - Date.now()) / 1000);
-  const formatter = new Intl.RelativeTimeFormat(undefined, { numeric: 'auto', style: 'short' });
+  const formatter = new Intl.RelativeTimeFormat('vi', { numeric: 'auto', style: 'short' });
   for (const [unit, secondsInUnit] of RELATIVE_UNITS) {
     if (Math.abs(deltaSec) >= secondsInUnit || unit === 'second') {
-      const value = Math.round(deltaSec / secondsInUnit);
-      return formatter.format(value, unit);
+      return formatter.format(Math.round(deltaSec / secondsInUnit), unit);
     }
   }
   return '';
 }
 
-interface ActionCardProps {
-  icon: ReactNode;
-  title: string;
-  tooltip: string;
-  onClick?: () => void;
-  disabled?: boolean;
-  badge?: string;
+function agentStatusClass(state: HomeResourceState): string {
+  if (state === 'connected' || state === 'success') {
+    return 'border-[rgba(34,197,94,0.4)] bg-[rgba(34,197,94,0.14)] text-[#4ADE80]';
+  }
+  if (state === 'pending' || state === 'loading') {
+    return 'border-[rgba(245,185,66,0.45)] bg-[rgba(245,185,66,0.14)] text-[#FBBF24]';
+  }
+  return 'border-white/10 bg-white/5 text-white/55';
 }
 
-function ActionCard({ icon, title, tooltip, onClick, disabled, badge }: ActionCardProps) {
-  const buttonRef = useRef<HTMLButtonElement>(null);
-  const showTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [visible, setVisible] = useState(false);
-  const [tipPos, setTipPos] = useState({ top: 0, left: 0 });
-
-  const computePosition = () => {
-    if (!buttonRef.current) return;
-    const rect = buttonRef.current.getBoundingClientRect();
-    setTipPos({ top: rect.top - 10, left: rect.left + rect.width / 2 });
-  };
-
-  const handleEnter = () => {
-    if (showTimerRef.current) clearTimeout(showTimerRef.current);
-    showTimerRef.current = setTimeout(() => {
-      computePosition();
-      setVisible(true);
-    }, 250);
-  };
-
-  const handleLeave = () => {
-    if (showTimerRef.current) {
-      clearTimeout(showTimerRef.current);
-      showTimerRef.current = null;
-    }
-    setVisible(false);
-  };
-
-  useEffect(() => {
-    return () => {
-      if (showTimerRef.current) clearTimeout(showTimerRef.current);
+function listEmptyCopy(
+  state: HomeResourceState,
+  kind: 'projects' | 'agents' | 'marketplace',
+  errorMessage?: string,
+): { title: string; description: string } {
+  if (state === 'failed') {
+    return {
+      title: `Không tải được ${kind}`,
+      description: errorMessage || 'Nguồn dữ liệu trả về lỗi.',
     };
-  }, []);
-
-  return (
-    <>
-      <button
-        ref={buttonRef}
-        type="button"
-        onClick={disabled ? undefined : onClick}
-        onMouseEnter={handleEnter}
-        onMouseLeave={handleLeave}
-        onFocus={() => {
-          computePosition();
-          setVisible(true);
-        }}
-        onBlur={handleLeave}
-        disabled={disabled}
-        aria-disabled={disabled || undefined}
-        aria-label={`${title}: ${tooltip}`}
-        className={[
-          'group relative flex h-full w-full min-h-[84px] sm:min-h-[92px] flex-col items-start justify-between gap-2',
-          'rounded-[var(--radius)] px-3 py-3 sm:px-3.5 sm:py-3.5 text-left',
-          'motion-safe:transition-colors',
-          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)] focus-visible:ring-offset-2',
-          'focus-visible:ring-offset-[var(--bg)]',
-          disabled
-            ? 'cursor-not-allowed bg-[var(--surface)] opacity-60'
-            : 'cursor-pointer bg-[var(--surface)] hover:bg-[var(--surface-hover)]',
-        ].join(' ')}
-      >
-        {badge && (
-          <span className="absolute right-2.5 top-2.5 rounded-full bg-[var(--bg)] px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-[var(--text-muted)]">
-            {badge}
-          </span>
-        )}
-        <div
-          className={[
-            'flex h-7 w-7 items-center justify-center',
-            disabled
-              ? 'text-[var(--text-subtle)]'
-              : 'text-[var(--text-muted)] group-hover:text-[var(--primary)] motion-safe:transition-colors',
-          ].join(' ')}
-        >
-          {icon}
-        </div>
-        <span className="text-sm font-semibold text-[var(--text)]">{title}</span>
-      </button>
-      {createPortal(
-        <AnimatePresence>
-          {visible && (
-            <motion.div
-              role="tooltip"
-              initial={{ opacity: 0, y: 4, scale: 0.96 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.96 }}
-              transition={{ type: 'spring', stiffness: 600, damping: 25, mass: 0.4 }}
-              transformTemplate={(_, generated) => `translate(-50%, -100%) ${generated}`}
-              className="pointer-events-none fixed z-[9999]"
-              style={{
-                top: `${tipPos.top}px`,
-                left: `${tipPos.left}px`,
-              }}
-            >
-              <div className="relative max-w-[240px] rounded-md border border-[var(--border-hover)] bg-black px-2.5 py-1.5 text-center shadow-[var(--shadow-large)]">
-                <span className="text-[11px] font-medium leading-snug text-white">{tooltip}</span>
-                <span
-                  aria-hidden="true"
-                  className="absolute left-1/2 top-full h-0 w-0 -translate-x-1/2 border-l-[5px] border-r-[5px] border-t-[5px] border-l-transparent border-r-transparent border-t-black"
-                />
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>,
-        document.body
-      )}
-    </>
-  );
-}
-
-interface SplitActionCardProps {
-  icon: ReactNode;
-  title: string;
-  tooltip: string;
-  onClick?: () => void;
-  secondaryIcon: ReactNode;
-  secondaryTooltip: string;
-  secondaryAriaLabel: string;
-  onSecondaryClick?: () => void;
-}
-
-// Two-pane variant of ActionCard: a wide primary half and a narrow secondary
-// half divided by a hairline. Each half hovers, focuses, and tooltips
-// independently while sharing one rounded surface so they read as a single card.
-function SplitActionCard({
-  icon,
-  title,
-  tooltip,
-  onClick,
-  secondaryIcon,
-  secondaryTooltip,
-  secondaryAriaLabel,
-  onSecondaryClick,
-}: SplitActionCardProps) {
-  const primaryRef = useRef<HTMLButtonElement>(null);
-  const secondaryRef = useRef<HTMLButtonElement>(null);
-  const showTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [activeTooltip, setActiveTooltip] = useState<'primary' | 'secondary' | null>(null);
-  const [tipPos, setTipPos] = useState({ top: 0, left: 0 });
-
-  const showTooltip = (which: 'primary' | 'secondary') => {
-    const ref = which === 'primary' ? primaryRef : secondaryRef;
-    if (!ref.current) return;
-    const rect = ref.current.getBoundingClientRect();
-    setTipPos({ top: rect.top - 10, left: rect.left + rect.width / 2 });
-    setActiveTooltip(which);
-  };
-
-  const handleEnter = (which: 'primary' | 'secondary') => () => {
-    if (showTimerRef.current) clearTimeout(showTimerRef.current);
-    showTimerRef.current = setTimeout(() => showTooltip(which), 250);
-  };
-
-  const handleLeave = () => {
-    if (showTimerRef.current) {
-      clearTimeout(showTimerRef.current);
-      showTimerRef.current = null;
-    }
-    setActiveTooltip(null);
-  };
-
-  useEffect(() => {
-    return () => {
-      if (showTimerRef.current) clearTimeout(showTimerRef.current);
+  }
+  if (state === 'unavailable') {
+    return {
+      title: `${kind} chưa khả dụng`,
+      description: errorMessage || 'Feed chưa được nối cho môi trường hiện tại.',
     };
-  }, []);
-
-  const tooltipText = activeTooltip === 'secondary' ? secondaryTooltip : tooltip;
-
-  return (
-    <>
-      <div className="flex h-full w-full overflow-hidden rounded-[var(--radius)] bg-[var(--surface)]">
-        <button
-          ref={primaryRef}
-          type="button"
-          onClick={onClick}
-          onMouseEnter={handleEnter('primary')}
-          onMouseLeave={handleLeave}
-          onFocus={() => showTooltip('primary')}
-          onBlur={handleLeave}
-          aria-label={`${title}: ${tooltip}`}
-          className={[
-            'group relative flex flex-1 min-h-[84px] sm:min-h-[92px] flex-col items-start justify-between gap-2',
-            'px-3 py-3 sm:px-3.5 sm:py-3.5 text-left',
-            'motion-safe:transition-colors cursor-pointer hover:bg-[var(--surface-hover)]',
-            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)] focus-visible:ring-inset',
-          ].join(' ')}
-        >
-          <div className="flex h-7 w-7 items-center justify-center text-[var(--text-muted)] group-hover:text-[var(--primary)] motion-safe:transition-colors">
-            {icon}
-          </div>
-          <span className="text-sm font-semibold text-[var(--text)]">{title}</span>
-        </button>
-
-        <button
-          ref={secondaryRef}
-          type="button"
-          onClick={onSecondaryClick}
-          onMouseEnter={handleEnter('secondary')}
-          onMouseLeave={handleLeave}
-          onFocus={() => showTooltip('secondary')}
-          onBlur={handleLeave}
-          aria-label={secondaryAriaLabel}
-          className={[
-            'group flex w-11 sm:w-12 flex-shrink-0 items-center justify-center',
-            'border-l border-[var(--border)]',
-            'motion-safe:transition-colors cursor-pointer hover:bg-[var(--surface-hover)]',
-            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)] focus-visible:ring-inset',
-          ].join(' ')}
-        >
-          <div className="flex h-7 w-7 items-center justify-center text-[var(--text-muted)] group-hover:text-[var(--primary)] motion-safe:transition-colors">
-            {secondaryIcon}
-          </div>
-        </button>
-      </div>
-      {createPortal(
-        <AnimatePresence>
-          {activeTooltip && (
-            <motion.div
-              role="tooltip"
-              initial={{ opacity: 0, y: 4, scale: 0.96 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.96 }}
-              transition={{ type: 'spring', stiffness: 600, damping: 25, mass: 0.4 }}
-              transformTemplate={(_, generated) => `translate(-50%, -100%) ${generated}`}
-              className="pointer-events-none fixed z-[9999]"
-              style={{
-                top: `${tipPos.top}px`,
-                left: `${tipPos.left}px`,
-              }}
-            >
-              <div className="relative max-w-[240px] rounded-md border border-[var(--border-hover)] bg-black px-2.5 py-1.5 text-center shadow-[var(--shadow-large)]">
-                <span className="text-[11px] font-medium leading-snug text-white">
-                  {tooltipText}
-                </span>
-                <span
-                  aria-hidden="true"
-                  className="absolute left-1/2 top-full h-0 w-0 -translate-x-1/2 border-l-[5px] border-r-[5px] border-t-[5px] border-l-transparent border-r-transparent border-t-black"
-                />
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>,
-        document.body
-      )}
-    </>
-  );
-}
-
-// Monochrome brand logos from Simple Icons CDN. `filter: invert(1)` turns the
-// default black SVG into pure white so every logo reads consistently on the
-// dark sidebar surface regardless of theme preset.
-// Slugs must resolve on cdn.simpleicons.org — Slack + Salesforce were
-// delisted (trademark) in 2024 and rendered as empty circles on the card.
-// Keep categories stable: messaging, CRM, dev-tooling.
-const CONNECTORS: Array<{ name: string; slug: string }> = [
-  { name: 'Linear', slug: 'linear' },
-  { name: 'Discord', slug: 'discord' },
-  { name: 'GitHub', slug: 'github' },
-  { name: 'HubSpot', slug: 'hubspot' },
-  { name: 'Sentry', slug: 'sentry' },
-];
-
-interface ConnectorsCardProps {
-  onClick: () => void;
-}
-
-function ConnectorsCard({ onClick }: ConnectorsCardProps) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-label="Connect your connectors: Linear, Discord, GitHub, HubSpot, Sentry and more"
-      title="Hook your workspace up to Linear, Discord, GitHub, HubSpot, Sentry and more via MCP."
-      className="group relative col-span-2 flex w-full min-h-[72px] items-center gap-3 rounded-[var(--radius)] bg-[var(--surface)] px-3.5 py-3 text-left motion-safe:transition-colors hover:bg-[var(--surface-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)] sm:gap-4 sm:px-4"
-    >
-      {/* Logo row */}
-      <div className="flex flex-shrink-0 items-center -space-x-1.5">
-        {CONNECTORS.map((c, i) => {
-          const url = `https://cdn.simpleicons.org/${c.slug}`;
-          return (
-            <span
-              key={c.slug}
-              className="flex h-7 w-7 items-center justify-center rounded-full bg-[var(--bg)] motion-safe:transition-transform group-hover:scale-[1.03]"
-              style={{ zIndex: CONNECTORS.length - i }}
-              aria-hidden="true"
-            >
-              {/* Mask-image technique: the SVG becomes a silhouette colored by
-                  background-color, so logos inherit --text-muted and match
-                  every other icon on the page across theme presets. */}
-              <span
-                className="block h-3.5 w-3.5 bg-[var(--text-muted)] group-hover:bg-[var(--text)] motion-safe:transition-colors"
-                style={{
-                  maskImage: `url(${url})`,
-                  WebkitMaskImage: `url(${url})`,
-                  maskRepeat: 'no-repeat',
-                  WebkitMaskRepeat: 'no-repeat',
-                  maskSize: 'contain',
-                  WebkitMaskSize: 'contain',
-                  maskPosition: 'center',
-                  WebkitMaskPosition: 'center',
-                }}
-              />
-            </span>
-          );
-        })}
-      </div>
-
-      {/* Text block */}
-      <div className="flex min-w-0 flex-1 flex-col">
-        <span className="text-sm font-semibold text-[var(--text)]">Connect your connectors</span>
-        <span className="truncate text-[11px] text-[var(--text-muted)]">
-          {CONNECTORS.map((c) => c.name).join(' · ')}
-        </span>
-      </div>
-
-      <ArrowRight
-        size={16}
-        className="flex-shrink-0 text-[var(--text-muted)] motion-safe:transition-transform group-hover:translate-x-0.5 group-hover:text-[var(--text)]"
-      />
-    </button>
-  );
+  }
+  if (kind === 'projects') {
+    return {
+      title: 'Chưa có workspace',
+      description: 'Tạo workspace để bắt đầu xây dựng với AI cho hệ sinh thái Pi.',
+    };
+  }
+  if (kind === 'agents') {
+    return {
+      title: 'Chưa có agent',
+      description: 'Thêm agent từ Marketplace hoặc tạo với @agent-builder.',
+    };
+  }
+  return {
+    title: 'Chưa có preview Marketplace',
+    description: 'Catalog trống hoặc API không phản hồi.',
+  };
 }
 
 export default function Home() {
   const navigate = useNavigate();
-  const { activeTeam, teamSwitchKey } = useTeam();
-  const { user } = useAuth();
-  // Greeting prefers the user's first name if available, otherwise the
-  // full display name. Falls back to "there" so the heading still reads
-  // like a sentence on the very first paint while auth is hydrating.
-  const greetingName = (user?.name?.split(' ')[0] || user?.name || 'there').trim();
-
-  const [recent, setRecent] = useState<RecentProject[]>([]);
-  const [recentLoading, setRecentLoading] = useState(true);
+  const { theme, toggleTheme } = useTheme();
+  const { viewModel } = useHomeDashboard();
 
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showImportDialog, setShowImportDialog] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
 
-  // Subscription / plan line — mirrors NavigationSidebar.tsx:133-135
-  const subscriptionTier = activeTeam?.subscription_tier || 'free';
-  const tierLabel = useMemo(
-    () => subscriptionTier.charAt(0).toUpperCase() + subscriptionTier.slice(1),
-    [subscriptionTier]
-  );
-  const isPaidPlan = subscriptionTier !== 'free';
+  const canMutate = viewModel.capabilities.canMutateBackend;
+  const showBadges = viewModel.capabilities.showPresentationBadges;
+  const isDemo = viewModel.environment === 'demo';
 
-  // Load recent projects — mirror NavigationSidebar.tsx:231-268 fetch pattern
-  useEffect(() => {
-    let cancelled = false;
-    setRecentLoading(true);
-    projectsApi
-      .getAll(activeTeam?.slug)
-      .then((data: unknown) => {
-        if (cancelled) return;
-        const list = (Array.isArray(data) ? data : []) as Array<Record<string, unknown>>;
-        const mapped: RecentProject[] = list
-          .map((p) => ({
-            id: (p.id as string) || '',
-            name: (p.name as string) || 'Untitled workspace',
-            slug: (p.slug as string) || '',
-            updatedAt:
-              (p.updated_at as string) || (p.created_at as string) || new Date(0).toISOString(),
-          }))
-          .filter((p) => p.slug)
-          .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
-          .slice(0, 5);
-        setRecent(mapped);
-      })
-      .catch(() => {
-        if (!cancelled) setRecent([]);
-      })
-      .finally(() => {
-        if (!cancelled) setRecentLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [activeTeam?.slug, teamSwitchKey]);
-
-  // Create-project handler — same flow as Dashboard.handleCreateProject.
-  // Duplicated intentionally to keep blast radius to this file (see plan).
   const handleCreateProject = useCallback(
     async (projectName: string, baseId?: string, baseVersion?: string) => {
       if (isCreating) return;
+      if (!canMutate) {
+        toast.error(
+          'Local Demo chỉ là giao diện — tạo workspace cần backend thật.',
+        );
+        return;
+      }
       setIsCreating(true);
       const creatingToast = toast.loading('Creating workspace...');
       try {
@@ -458,7 +136,7 @@ export default function Home() {
           undefined,
           'main',
           baseId,
-          baseVersion || undefined
+          baseVersion || undefined,
         );
         const project = response.project;
         const taskId = response.task_id;
@@ -490,13 +168,16 @@ export default function Home() {
         setIsCreating(false);
       }
     },
-    [isCreating, navigate]
+    [isCreating, navigate, canMutate],
   );
 
-  // Clone-repo handler — mirror Dashboard.tsx:1298-… onCreateProject.
   const handleImportRepo = useCallback(
     async (provider: string, repoUrl: string, branch: string, projectName: string) => {
       if (isCreating) return;
+      if (!canMutate) {
+        toast.error('Local Demo chỉ là giao diện — import cần backend thật.');
+        return;
+      }
       setIsCreating(true);
       const creatingToast = toast.loading(`Importing from ${provider}...`);
       try {
@@ -506,7 +187,7 @@ export default function Home() {
           provider as 'github' | 'gitlab' | 'bitbucket',
           repoUrl,
           branch,
-          undefined
+          undefined,
         );
         const project = response.project;
         const taskId = response.task_id;
@@ -538,152 +219,511 @@ export default function Home() {
         setIsCreating(false);
       }
     },
-    [isCreating, navigate]
+    [isCreating, navigate, canMutate],
   );
 
   const handleUpgrade = () => navigate('/settings/team/billing');
-  const handleOpenProject = (slug: string) => navigate(`/project/${slug}`);
+  const handleOpenProject = (slug: string, isPresentation?: boolean) => {
+    if (isPresentation) {
+      toast('Workspace presentation — mở Workspaces để tạo dự án thật.', { icon: 'ℹ️' });
+      return;
+    }
+    navigate(`/project/${slug}`);
+  };
+
+  const openCommandPalette = () => {
+    window.dispatchEvent(new CustomEvent('tesslate-open-command-palette'));
+  };
+
+  const projectsCopy = listEmptyCopy(
+    viewModel.projects.state,
+    'projects',
+    viewModel.projects.errorMessage,
+  );
+  const agentsCopy = listEmptyCopy(
+    viewModel.agents.state,
+    'agents',
+    viewModel.agents.errorMessage,
+  );
+  const marketplaceCopy = listEmptyCopy(
+    viewModel.marketplace.state,
+    'marketplace',
+    viewModel.marketplace.errorMessage,
+  );
+
+  const demoSafeMetrics = isDemo
+    ? [
+        { value: String(viewModel.projects.items.length), label: 'Demo Projects' },
+        { value: String(viewModel.agents.items.length), label: 'Demo Agents' },
+        { value: String(viewModel.marketplace.items.length), label: 'Featured Templates' },
+        { value: 'Local', label: 'Demo' },
+      ]
+    : undefined;
 
   return (
-    <div className="h-full w-full overflow-y-auto">
-      <div className="flex min-h-full items-center justify-center">
-        <div className="flex w-full max-w-[560px] flex-col gap-6 px-4 py-8 sm:px-6 sm:py-12 lg:px-8 lg:py-16">
-          {/* Welcome header + plan line */}
-          <header className="flex flex-col items-center gap-2 text-center">
-            <h1 className="text-xl font-semibold tracking-tight text-[var(--text)] sm:text-2xl">
-              Welcome to OpenSail, {greetingName}
-            </h1>
-            <p className="flex items-center gap-1.5 text-xs text-[var(--text-muted)] sm:text-sm">
-              <span>{tierLabel} Plan</span>
-              {!isPaidPlan && (
+    <div className="home-studio h-full w-full overflow-y-auto">
+      <div className="mx-auto flex min-h-full w-full max-w-[1520px] flex-col gap-4 px-4 py-4 sm:gap-5 sm:px-6 sm:py-5 lg:px-7 lg:py-6">
+        <HomeTopBar
+          userName={viewModel.userDisplayName}
+          userSubtitle={viewModel.userSubtitle}
+          theme={theme}
+          searchPlaceholder="Tìm kiếm lệnh, dự án, agent…"
+          onToggleTheme={toggleTheme}
+          onOpenSearch={openCommandPalette}
+          onOpenSettings={() => navigate('/settings')}
+        />
+
+        <HomeHero
+          greeting={`Chào mừng trở lại, ${viewModel.greetingName}`}
+          identityLine={PRODUCT_HERO}
+          subtitle={viewModel.heroSubtitle}
+          primaryCta={{
+            label: 'Không gian làm việc mới',
+            onClick: () => setShowCreateDialog(true),
+          }}
+          secondaryCta={{
+            label: 'Khám phá Chợ',
+            onClick: () => navigate('/marketplace'),
+          }}
+          planLine={
+            <p className="w-full text-[12px] text-white/50 sm:w-auto sm:ml-1">
+              <span className="font-medium text-white/80">{viewModel.planLabel} Plan</span>
+              {viewModel.showUpgrade && (
                 <>
-                  <span aria-hidden="true">·</span>
+                  <span aria-hidden="true"> · </span>
                   <button
                     type="button"
                     onClick={handleUpgrade}
-                    className="text-[var(--primary)] hover:underline focus-visible:outline-none focus-visible:underline"
+                    className="text-[#F5B942] hover:underline focus-visible:outline-none focus-visible:underline"
                   >
-                    Upgrade
+                    Nâng cấp
                   </button>
                 </>
               )}
+              {isDemo && (
+                <>
+                  <span aria-hidden="true"> · </span>
+                  <span className="home-badge-demo align-middle">Demo</span>
+                </>
+              )}
             </p>
-          </header>
+          }
+        />
 
-          {/* Action grid — 2x2 */}
-          <div className="grid grid-cols-2 gap-2 sm:gap-2.5">
-            <ActionCard
+        <section aria-labelledby="home-quick-actions">
+          <HomeSectionHeader
+            id="home-quick-actions"
+            title="Bắt đầu nhanh"
+            subtitle="Hành động gắn với route / dialog thật"
+          />
+          <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-5">
+            <HomeQuickAction
               icon={<FolderPlus size={20} weight="duotone" />}
-              title="New Workspace"
-              tooltip="Create a fresh workspace. Name it, pick a template, and start building."
+              title="Tạo Workspace mới"
+              description="Tạo dự án từ template"
               onClick={() => setShowCreateDialog(true)}
+              badge={!canMutate ? 'Demo' : undefined}
+              accent="violet"
             />
-            <ActionCard
-              icon={<GitBranch size={20} weight="duotone" />}
-              title="Clone Repo"
-              tooltip="Import an existing GitHub, GitLab, or Bitbucket repo as a new workspace."
-              onClick={() => setShowImportDialog(true)}
+            <HomeQuickAction
+              icon={<Sparkle size={20} weight="duotone" />}
+              title="Tạo ứng dụng mới"
+              description="Cài app từ Marketplace"
+              onClick={() => navigate('/marketplace?type=app')}
+              accent="gold"
             />
-            <ActionCard
-              icon={<SquaresFour size={20} />}
-              title="Apps"
-              tooltip="Install and launch prebuilt apps into your workspace."
-              onClick={() => navigate('/apps/installed')}
-            />
-            <SplitActionCard
-              icon={<MoodyFace size={20} animate trackPointer className="text-[var(--primary)]" />}
-              title="Agents"
-              tooltip="Chat with agents to automate workflows in your projects."
-              onClick={() => navigate('/chat')}
-              secondaryIcon={<Plus size={18} weight="bold" />}
-              secondaryTooltip="Build a new custom agent with @agent-builder."
-              secondaryAriaLabel="Create new agent"
-              onSecondaryClick={() =>
+            <HomeQuickAction
+              icon={<MoodyFace size={20} animate trackPointer className="text-[#C4B5FD]" />}
+              title="Tạo Agent"
+              description="Mở Agents / @agent-builder"
+              onClick={() =>
                 navigate('/chat', { state: { landingPrompt: '@agent-builder ' } })
               }
+              accent="mint"
             />
-            <ConnectorsCard onClick={() => navigate('/marketplace/browse/mcp_server')} />
-            <ChannelsCard onClick={() => navigate('/library?tab=channels')} />
+            <HomeQuickAction
+              icon={<GitBranch size={20} weight="duotone" />}
+              title="Import Project"
+              description="Clone GitHub / GitLab / Bitbucket"
+              onClick={() => setShowImportDialog(true)}
+              badge={!canMutate ? 'Demo' : undefined}
+              accent="violet"
+            />
+            <HomeQuickAction
+              icon={<Storefront size={20} weight="duotone" />}
+              title="Khám phá Marketplace"
+              description="Templates, skills, connectors"
+              onClick={() => navigate('/marketplace')}
+              accent="gold"
+            />
           </div>
+          <div className="mt-2.5 grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+            <button
+              type="button"
+              onClick={() => navigate('/apps/installed')}
+              className="home-card home-card-interactive flex items-center gap-3 px-3.5 py-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7C3AED]"
+            >
+              <span className="home-icon-well h-9 w-9">
+                <SquaresFour size={18} />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-[13px] font-semibold text-white">Ứng dụng của tôi</span>
+                <span className="block text-[11px] text-white/45">Apps đã cài trong workspace</span>
+              </span>
+              <ArrowRight size={15} className="text-white/35" />
+            </button>
+            <button
+              type="button"
+              onClick={() => navigate('/library?tab=mcp_servers')}
+              className="home-card home-card-interactive flex items-center gap-3 px-3.5 py-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7C3AED]"
+            >
+              <span className="home-icon-well h-9 w-9">
+                <Package size={18} />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-[13px] font-semibold text-white">Pi Connectors</span>
+                <span className="block text-[11px] text-white/45">MCP trong Library</span>
+              </span>
+              <ArrowRight size={15} className="text-white/35" />
+            </button>
+          </div>
+        </section>
 
-          {/* Recent Projects — finder-style list */}
-          <section aria-labelledby="recent-projects-heading" className="flex flex-col gap-2">
-            <div className="flex items-center justify-between">
-              <h2
-                id="recent-projects-heading"
-                className="text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)]"
-              >
-                Recent Workspaces
-              </h2>
-              {recent.length > 0 && (
-                <button
-                  type="button"
-                  onClick={() => navigate('/dashboard')}
-                  className="flex items-center gap-1 text-[11px] font-medium text-[var(--text-muted)] hover:text-[var(--text)] focus-visible:outline-none focus-visible:text-[var(--text)]"
-                >
-                  View all
-                  <ArrowRight size={12} />
-                </button>
-              )}
-            </div>
-
-            {recentLoading ? (
-              <div
-                className="rounded-[var(--radius)] bg-[var(--surface)] px-4 py-6 text-center text-xs text-[var(--text-muted)]"
-                role="status"
-                aria-live="polite"
-              >
-                Loading workspaces…
-              </div>
-            ) : recent.length === 0 ? (
-              <div className="flex flex-col items-center gap-2 rounded-[var(--radius)] bg-[var(--surface)] px-4 py-8 text-center">
-                <FolderOpen size={24} className="text-[var(--text-subtle)]" />
-                <p className="text-sm text-[var(--text-muted)]">No workspaces yet</p>
-                <p className="text-xs text-[var(--text-subtle)]">
-                  Click <span className="text-[var(--text-muted)]">New Workspace</span> above to
-                  create your first one.
-                </p>
-              </div>
-            ) : (
-              <ul className="flex flex-col overflow-hidden rounded-[var(--radius)] bg-[var(--surface)]">
-                {recent.map((p) => (
-                  <li key={p.id}>
+        <div className="grid grid-cols-1 gap-4 xl:grid-cols-12 xl:gap-5">
+          <div className="min-w-0 space-y-5 xl:col-span-8">
+            {/* Projects */}
+            <section aria-labelledby="home-recent-projects">
+              <HomeSectionHeader
+                id="home-recent-projects"
+                title="Dự án gần đây"
+                subtitle={
+                  showBadges
+                    ? 'Catalog presentation — gắn nhãn Demo'
+                    : 'Workspace từ nguồn dữ liệu hiện tại'
+                }
+                action={<HomeSectionLink to="/dashboard">Xem tất cả</HomeSectionLink>}
+              />
+              {viewModel.projects.state === 'loading' ? (
+                <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+                  {[0, 1, 2, 3].map((i) => (
+                    <div key={i} className="home-card h-[8.5rem] animate-pulse" />
+                  ))}
+                </div>
+              ) : viewModel.projects.items.length > 0 ? (
+                <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+                  {viewModel.projects.items.map((p) => (
                     <button
+                      key={p.id}
                       type="button"
-                      onClick={() => handleOpenProject(p.slug)}
-                      className={[
-                        'flex w-full items-center gap-3 px-3 py-2.5 text-left motion-safe:transition-colors',
-                        'hover:bg-[var(--surface-hover)] focus-visible:outline-none focus-visible:bg-[var(--surface-hover)]',
-                      ].join(' ')}
+                      onClick={() => handleOpenProject(p.slug, p.isPresentationData)}
+                      className="home-card home-card-interactive group relative flex flex-col gap-3 p-3.5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7C3AED]"
+                      data-presentation={p.isPresentationData ? 'true' : 'false'}
                     >
-                      <Folder
-                        size={18}
-                        weight="duotone"
-                        className="flex-shrink-0 text-[var(--text-muted)]"
-                      />
-                      <div className="flex min-w-0 flex-1 flex-col">
-                        <span className="truncate text-sm text-[var(--text)]">{p.name}</span>
-                        <span className="truncate text-[11px] text-[var(--text-subtle)]">
-                          {activeTeam?.slug ? `${activeTeam.slug}/` : ''}
-                          {p.slug}
+                      <div className="flex items-start gap-3">
+                        <span className="home-icon-well h-11 w-11 shrink-0">
+                          <Folder size={20} weight="duotone" />
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <span className="flex items-start justify-between gap-2">
+                            <span className="truncate text-[14px] font-semibold text-white group-hover:text-[#C4B5FD]">
+                              {p.name}
+                            </span>
+                            {p.isPresentationData && <span className="home-badge-demo">Demo</span>}
+                          </span>
+                          <span className="mt-0.5 line-clamp-2 text-[12px] leading-snug text-white/50">
+                            {p.description || p.slug}
+                          </span>
                         </span>
                       </div>
-                      <span
-                        className="hidden flex-shrink-0 text-[11px] text-[var(--text-muted)] sm:inline"
-                        title={new Date(p.updatedAt).toLocaleString()}
-                      >
-                        {formatRelativeTime(p.updatedAt)}
-                      </span>
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        {p.projectType && (
+                          <span className="rounded-md border border-white/10 bg-white/[0.04] px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white/55">
+                            {p.projectType}
+                          </span>
+                        )}
+                        {p.stackLabels?.map((label) => (
+                          <span
+                            key={label}
+                            className="rounded-md border border-[rgba(124,58,237,0.35)] bg-[rgba(124,58,237,0.12)] px-1.5 py-0.5 text-[10px] font-medium text-[#C4B5FD]"
+                          >
+                            {label}
+                          </span>
+                        ))}
+                      </div>
+                      <div className="mt-auto flex items-center justify-between gap-2 border-t border-white/[0.06] pt-2.5">
+                        <span className="flex items-center">
+                          {(p.collaboratorInitials || ['HA']).slice(0, 4).map((ini) => (
+                            <span key={ini} className="home-avatar" title={ini}>
+                              {ini}
+                            </span>
+                          ))}
+                        </span>
+                        <span className="flex items-center gap-2 text-[11px] text-white/40">
+                          {p.statusLabel && (
+                            <span className="inline-flex items-center gap-1 text-[#4ADE80]">
+                              <span className="h-1.5 w-1.5 rounded-full bg-[#22C55E]" />
+                              {p.statusLabel}
+                            </span>
+                          )}
+                          <span>{formatRelativeTime(p.updatedAt) || 'gần đây'}</span>
+                        </span>
+                      </div>
                     </button>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </section>
+                  ))}
+                </div>
+              ) : (
+                <HomeEmptyState
+                  icon={<FolderOpen size={20} />}
+                  title={projectsCopy.title}
+                  description={projectsCopy.description}
+                  actionLabel="Không gian làm việc mới"
+                  onAction={() => setShowCreateDialog(true)}
+                />
+              )}
+            </section>
+
+            {/* Agents */}
+            <section aria-labelledby="home-agents">
+              <HomeSectionHeader
+                id="home-agents"
+                title="Agent của tôi"
+                subtitle={
+                  showBadges ? 'Agent presentation — không thực thi backend' : 'Agent từ nguồn hiện tại'
+                }
+                action={<HomeSectionLink to="/chat">Mở Agents</HomeSectionLink>}
+              />
+              {viewModel.agents.state === 'loading' ? (
+                <div className="space-y-2">
+                  {[0, 1, 2].map((i) => (
+                    <div key={i} className="home-card h-[4.25rem] animate-pulse" />
+                  ))}
+                </div>
+              ) : viewModel.agents.items.length > 0 ? (
+                <ul className="space-y-2">
+                  {viewModel.agents.items.map((agent) => (
+                    <li key={agent.id}>
+                      <button
+                        type="button"
+                        onClick={() => navigate('/chat')}
+                        className="home-card home-card-interactive flex w-full items-center gap-3 px-3.5 py-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7C3AED]"
+                        data-presentation={agent.isPresentationData ? 'true' : 'false'}
+                      >
+                        <span className="home-icon-well flex h-11 w-11 shrink-0 items-center justify-center text-lg">
+                          {agent.icon && String(agent.icon).startsWith('http') ? (
+                            <img src={agent.icon} alt="" className="h-full w-full object-cover" />
+                          ) : (
+                            agent.icon || '🤖'
+                          )}
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <span className="flex items-center gap-2 truncate text-[14px] font-semibold text-white">
+                            {agent.name}
+                            {agent.isPresentationData && (
+                              <span className="home-badge-demo">Demo</span>
+                            )}
+                          </span>
+                          <span className="mt-0.5 block truncate text-[12px] text-white/50">
+                            {agent.description || 'Marketplace agent'}
+                          </span>
+                          {agent.lastActivityLabel && (
+                            <span className="mt-0.5 block text-[11px] text-white/35">
+                              {agent.lastActivityLabel}
+                            </span>
+                          )}
+                        </span>
+                        <span
+                          className={`shrink-0 rounded-full border px-2.5 py-1 text-[10px] font-bold tracking-wide ${agentStatusClass(agent.statusState)}`}
+                        >
+                          {agent.statusLabel}
+                        </span>
+                        <ArrowRight size={15} className="hidden text-white/30 sm:block" />
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <HomeEmptyState
+                  icon={<Robot size={20} />}
+                  title={agentsCopy.title}
+                  description={agentsCopy.description}
+                  actionLabel="Duyệt Agents"
+                  actionTo="/marketplace?type=agent"
+                />
+              )}
+            </section>
+
+            {/* Marketplace */}
+            <section aria-labelledby="home-marketplace">
+              <HomeSectionHeader
+                id="home-marketplace"
+                title="Khám phá Marketplace"
+                subtitle={
+                  showBadges
+                    ? 'Card presentation — không phải số liệu chính thức'
+                    : 'Preview từ catalog hiện tại'
+                }
+                action={<HomeSectionLink to="/marketplace">Chợ</HomeSectionLink>}
+              />
+              {viewModel.marketplace.state === 'loading' ? (
+                <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
+                  {[0, 1, 2, 3].map((i) => (
+                    <div key={i} className="home-card h-44 animate-pulse" />
+                  ))}
+                </div>
+              ) : viewModel.marketplace.items.length > 0 ? (
+                <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
+                  {viewModel.marketplace.items.map((item) => (
+                    <Link
+                      key={`${item.kind}-${item.id}`}
+                      to={item.href}
+                      className="home-card home-card-interactive group relative flex min-h-[11rem] flex-col p-3.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7C3AED]"
+                      data-presentation={item.isPresentationData ? 'true' : 'false'}
+                    >
+                      {item.isPresentationData && (
+                        <span className="home-badge-demo absolute right-2.5 top-2.5">Demo</span>
+                      )}
+                      <div className="home-icon-well mb-2.5 h-10 w-10">
+                        {item.kind === 'agent' ? (
+                          <Robot size={20} />
+                        ) : item.kind === 'skill' ? (
+                          <Sparkle size={20} />
+                        ) : item.kind === 'template' ? (
+                          <Cube size={20} />
+                        ) : (
+                          <Code size={20} />
+                        )}
+                      </div>
+                      <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-[#A78BFA]">
+                        {item.categoryLabel || item.kind}
+                      </p>
+                      <p className="mt-1 line-clamp-1 text-[13px] font-semibold text-white group-hover:text-[#C4B5FD]">
+                        {item.name}
+                      </p>
+                      <p className="mt-1 line-clamp-2 flex-1 text-[11px] leading-relaxed text-white/50">
+                        {item.description || '—'}
+                      </p>
+                      {item.ratingLabel && (
+                        <p className="mt-2 text-[11px] font-medium text-[#F5B942]">
+                          {item.ratingLabel}
+                        </p>
+                      )}
+                    </Link>
+                  ))}
+                </div>
+              ) : (
+                <HomeEmptyState
+                  icon={<Storefront size={20} />}
+                  title={marketplaceCopy.title}
+                  description={marketplaceCopy.description}
+                  actionLabel="Mở Marketplace"
+                  actionTo="/marketplace"
+                />
+              )}
+            </section>
+          </div>
+
+          {/* Right rail */}
+          <aside className="min-w-0 space-y-3 xl:col-span-4">
+            <HomeSystemStatusPanel
+              title="Trạng thái hệ thống"
+              footnote={viewModel.systemStatusFootnote}
+              items={viewModel.systemStatus.map((s) => ({
+                id: s.id,
+                label: s.label,
+                detail: s.detail,
+                tone: s.tone,
+              }))}
+            />
+
+            <HomePiBalancePanel {...viewModel.piBalance} />
+
+            <section aria-labelledby="home-activity" className="home-rail-card p-4">
+              <h2
+                id="home-activity"
+                className="font-heading text-[14px] font-semibold text-white"
+              >
+                Hoạt động gần đây
+              </h2>
+              <p className="mt-1 mb-3 text-[11px] text-white/40">
+                {showBadges
+                  ? 'Timeline presentation (demo data).'
+                  : 'Tóm tắt từ nguồn dữ liệu hiện tại.'}
+              </p>
+              {viewModel.activity.state === 'loading' ? (
+                <div className="space-y-2">
+                  {[0, 1, 2].map((i) => (
+                    <div key={i} className="h-9 animate-pulse rounded-lg bg-white/5" />
+                  ))}
+                </div>
+              ) : viewModel.activity.items.length > 0 ? (
+                <ul className="space-y-2.5">
+                  {viewModel.activity.items.map((item) => (
+                    <li
+                      key={item.id}
+                      className="flex gap-2.5 rounded-lg border border-white/[0.05] bg-black/20 px-2.5 py-2"
+                    >
+                      <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[rgba(124,58,237,0.2)] text-[12px] text-[#C4B5FD]">
+                        {item.icon || '●'}
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="flex items-center gap-1.5 truncate text-[12px] font-medium text-white">
+                          {item.title}
+                          {item.isPresentationData && (
+                            <span className="home-badge-demo">Demo</span>
+                          )}
+                        </span>
+                        {item.detail && (
+                          <span className="mt-0.5 block truncate text-[11px] text-white/45">
+                            {item.detail}
+                          </span>
+                        )}
+                        <span className="mt-0.5 flex items-center justify-between gap-2 text-[10px] text-white/35">
+                          <span>{formatRelativeTime(item.at) || '—'}</span>
+                          {item.statusLabel && <span>{item.statusLabel}</span>}
+                        </span>
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-[12px] text-white/45">
+                  {viewModel.activity.state === 'unavailable'
+                    ? 'Activity chưa khả dụng.'
+                    : 'Chưa có hoạt động.'}
+                </p>
+              )}
+            </section>
+
+            <div className="home-rail-card p-3.5">
+              <p className="text-[12px] font-semibold text-white mb-1">{PRODUCT_NAME}</p>
+              <p className="mb-2.5 text-[11px] leading-relaxed text-white/45">
+                Môi trường dữ liệu:{' '}
+                <span className="font-semibold uppercase text-[#F5B942]">
+                  {viewModel.environment}
+                </span>
+                . Có thể đổi sang Pi Testnet sau mà không redesign UI.
+              </p>
+              <Link
+                to="/settings"
+                className="inline-flex text-[12px] font-semibold text-[#C4B5FD] hover:text-white focus-visible:outline-none focus-visible:underline"
+              >
+                Mở Cài đặt
+              </Link>
+            </div>
+          </aside>
         </div>
+
+        <HomeIdentityCta
+          title={PRODUCT_HERO}
+          subtitle={`${PRODUCT_NAME} — xây dựng với AI, dành cho hệ sinh thái Pi.`}
+          primaryLabel="Không gian làm việc mới"
+          onPrimary={() => setShowCreateDialog(true)}
+          secondaryLabel="Khám phá Chợ"
+          onSecondary={() => navigate('/marketplace')}
+          metrics={demoSafeMetrics}
+        />
       </div>
 
-      {/* Modals */}
       <CreateProjectModal
         isOpen={showCreateDialog}
         onClose={() => setShowCreateDialog(false)}

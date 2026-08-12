@@ -470,11 +470,11 @@ export default function MyAppsPage() {
             className="flex flex-col items-center justify-center min-h-[60vh] px-6 text-center"
             data-testid="my-apps-empty"
           >
-            <div className="h-16 w-16 rounded-[var(--radius)] bg-[var(--surface-hover)] border border-[var(--border)] flex items-center justify-center mb-4">
-              <Package className="w-8 h-8 text-[var(--text-subtle)]" />
+            <div className="h-16 w-16 rounded-[var(--radius)] studio-surface-elevated border border-[var(--border)] flex items-center justify-center mb-4">
+              <Package className="w-8 h-8 text-[var(--primary)]" />
             </div>
             <h1 className="text-sm font-semibold text-[var(--text)] mb-2">
-              No apps installed yet
+              No apps yet
             </h1>
             <p className="text-xs text-[var(--text-muted)] max-w-md mb-6">
               Install your first app from the marketplace. Apps run in a sandboxed session with

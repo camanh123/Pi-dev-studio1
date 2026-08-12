@@ -522,6 +522,13 @@ export function CommandPalette({ onShowShortcuts }: CommandPaletteProps) {
     }
   );
 
+  // Home search / other surfaces can open the palette without remounting shortcuts
+  useEffect(() => {
+    const onOpen = () => setOpen(true);
+    window.addEventListener('tesslate-open-command-palette', onOpen);
+    return () => window.removeEventListener('tesslate-open-command-palette', onOpen);
+  }, []);
+
   // Close with Escape
   useHotkeys(
     'escape',

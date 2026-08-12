@@ -17,6 +17,8 @@
 | `Pi.authenticate(["username"], …)` | Included |
 | Backend `GET /v2/me` Bearer verify | Included |
 | Generated-app local verified-user state | Included (minimal) |
+| Vite `/api` proxy (DEV only) | Required for OpenSail Testnet E2E |
+| `VITE_BACKEND_URL` | K8s sibling inject (`http://dev-backend:8001`); local Vite default `http://localhost:8001` |
 | Server API Key / payments | **Deferred — Phase 5** |
 | OpenSail Studio auth | **Must not modify** |
 
@@ -27,6 +29,13 @@ Generated-app Pi auth  ≠  OpenSail JWT/OAuth
 ```
 
 Never wire Pi tokens into OpenSail `/api/auth/*`.
+
+## OpenSail containers
+
+- Frontend `:5173` — keep `npm run dev` (do not switch Testnet E2E to static `dist`)
+- Backend `:8001` — `/health`, `/pi/auth/verify`
+- On Kubernetes, sibling injection sets `VITE_BACKEND_URL=http://dev-backend:8001`
+  (container name `backend` → `VITE_BACKEND_URL`). Do not hardcode Docker hostnames for K8s.
 
 ## Skills to load
 

@@ -6,6 +6,7 @@ import { List } from '@phosphor-icons/react';
 import { motion } from 'framer-motion';
 import { useState, useEffect } from 'react';
 import { BuilderShellProvider, useBuilderShell } from '../contexts/BuilderShellContext';
+import { PRODUCT_NAME } from '../lib/branding';
 
 export function DashboardLayout() {
   return (
@@ -69,10 +70,11 @@ function DashboardLayoutInner() {
 
   return (
     <motion.div
-      className="h-full flex overflow-hidden bg-[var(--sidebar-bg)]"
+      className="h-full flex overflow-hidden studio-app-bg bg-[var(--sidebar-bg)]"
       initial={fromLogin ? { opacity: 0 } : { opacity: 1 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.3, ease: 'easeOut' }}
+      aria-label={`${PRODUCT_NAME} workspace`}
     >
       {/* Sidebar + content row — TitleBar lives in the App-level shell above */}
       {/* Mobile Warning */}
@@ -141,6 +143,7 @@ function DashboardLayoutInner() {
           marginLeft: '0',
           border: 'var(--border-width) solid var(--border)',
           backgroundColor: 'var(--bg)',
+          boxShadow: 'inset 0 1px 0 rgba(167, 139, 250, 0.06)',
         }}
         initial={fromLogin ? { opacity: 0 } : { opacity: 1 }}
         animate={{ opacity: 1 }}
