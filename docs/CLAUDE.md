@@ -48,6 +48,7 @@ OpenSail consists of four major systems:
 | [apps/CLAUDE.md](apps/CLAUDE.md) | Tesslate Apps: publish, install, approval pipeline |
 | [packages/CLAUDE.md](packages/CLAUDE.md) | tesslate-agent, tesslate-app-sdk, tesslate-embed-sdk |
 | [sdk/CLAUDE.md](sdk/CLAUDE.md) | Top-level @tesslate/sdk TypeScript client for the OpenSail REST API |
+| [pi/CLAUDE.md](pi/CLAUDE.md) | Pi capability registry (platform fact vs Studio implementation) |
 | [scripts/CLAUDE.md](scripts/CLAUDE.md) | Operational scripts (deploy, seed, litellm, migration, utilities) |
 | [seeds/CLAUDE.md](seeds/CLAUDE.md) | Seed Tesslate Apps under `seeds/apps/` |
 | [infrastructure/traefik/CLAUDE.md](infrastructure/traefik/CLAUDE.md) | Traefik routing (Docker mode only) |
@@ -192,6 +193,7 @@ Load this root CLAUDE.md when:
 | Cloud client + project sync service | [orchestrator/services/cloud-client.md](orchestrator/services/cloud-client.md) |
 | Operational scripts (deploy, seed, litellm, migration) | [scripts/README.md](scripts/README.md) |
 | Seed or edit a Tesslate App template | [seeds/README.md](seeds/README.md) |
+| Pi capability registry (what Pi Network supports) | [pi/CLAUDE.md](pi/CLAUDE.md) / [pi/capability-registry.md](pi/capability-registry.md) |
 | Traefik routing (Docker mode) | [infrastructure/traefik/README.md](infrastructure/traefik/README.md) |
 | Docker Compose files (dev/prod/tunnel/test) | [infrastructure/docker-compose/README.md](infrastructure/docker-compose/README.md) |
 | Storage architecture (btrfs CSI, Volume Hub, CAS) | [architecture/storage-architecture.md](architecture/storage-architecture.md) |

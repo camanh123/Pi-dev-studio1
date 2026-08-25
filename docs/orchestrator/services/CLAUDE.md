@@ -38,6 +38,7 @@ The services layer (`orchestrator/app/services/`) implements core business logic
 - **litellm_service.py** (445 lines) - `LiteLLMService` for AI model routing
 - **stripe_service.py** (970 lines) - `StripeService` for payment processing
 - **usage_service.py** - AI usage tracking and billing
+- **pi_capabilities/** - Pi Network capability registry (SUPPORTED / LIMITED / UNSUPPORTED), query API, and `can_generate` guard. Platform facts only; not a payment integration. See [docs/pi/CLAUDE.md](../../pi/CLAUDE.md).
 - **credit_service.py** - Credit deduction with priority ordering (daily → bundled → signup_bonus → purchased), BYOK detection, SELECT FOR UPDATE locking
 - **model_pricing.py** - Dynamic model pricing from LiteLLM `/model/info` with 5-minute cache, Decimal arithmetic for financial precision
 - **daily_credit_reset.py** - Background hourly loop resetting daily credits for free-tier users (UTC midnight) and expiring signup bonuses
@@ -131,6 +132,7 @@ AI, credits, payments:
 - [model-pricing.md](./model-pricing.md): dynamic LiteLLM pricing.
 - [litellm.md](./litellm.md): LiteLLM proxy client and key orchestration.
 - [stripe.md](./stripe.md): Stripe payments.
+- [docs/pi/capability-registry.md](../../pi/capability-registry.md): Pi Network capability truth layer (`pi_capabilities`).
 - [cache.md](./cache.md): distributed cache (Redis + in-memory fallback).
 
 Messaging and integrations:

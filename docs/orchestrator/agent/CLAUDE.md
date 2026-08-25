@@ -65,6 +65,7 @@ What remains in `orchestrator/app/agent/` is the first-party tool layer that the
 | `docs/orchestrator/services/CLAUDE.md` | Tool executors that call into services (orchestration, pubsub, encryption) |
 | `docs/orchestrator/routers/CLAUDE.md` | Agent invocation endpoints (chat, external_agent) |
 | `docs/orchestrator/agent/agent-runner.md` | How the orchestrator calls the tesslate-agent submodule |
+| `docs/pi/CLAUDE.md` | Pi capability registry — consult before generating Pi-specific code |
 
 ## When to Load This Context
 
