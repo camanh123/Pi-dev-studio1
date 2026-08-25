@@ -1,3 +1,0 @@
-[submodule "packages/tesslate-agent"]
-	path = packages/tesslate-agent
-	url = https://github.com/TesslateAI/tesslate-agent.git
