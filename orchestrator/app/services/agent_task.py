@@ -124,6 +124,18 @@ class AgentTaskPayload:
     # channels, schedules, external_agent) need no change.
     compute_profile: str = "persistent_workspace"
 
+    # Phase 1 runtime contract — optional, legacy-safe via from_dict.
+    # Chat / automations may set these; the worker falls back to the
+    # automation contract and then to Settings.WORKER_JOB_TIMEOUT.
+    max_iterations: int | None = None
+    """Positive cap forwarded to tesslate-agent. None/0 = unlimited."""
+
+    timeout_seconds: int | None = None
+    """Wall-clock timeout for this run. None = worker_job_timeout default."""
+
+    workspace_root: str | None = None
+    """Host (or logical) workspace path assigned to this execution."""
+
     def to_dict(self) -> dict:
         """Serialize to dict for ARQ job dispatch."""
         return asdict(self)

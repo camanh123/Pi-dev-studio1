@@ -17,6 +17,7 @@ import asyncio
 import contextlib
 import logging
 import os
+import time
 from datetime import UTC, datetime
 from uuid import UUID
 
@@ -555,6 +556,12 @@ async def execute_agent_task(ctx: dict, payload_dict: dict):
     completion_reason: str | None = None
     session_id: str | None = None
     chat = None
+    workspace_root: str | None = payload.workspace_root or None
+    _max_iter: int | None = None
+    _timeout_seconds: int | None = None
+    _runtime_started_at: str | None = None
+    _runtime_started_mono: float | None = None
+    model_name = payload.model_name or ""
 
     logger.info(f"[WORKER] Starting agent task {task_id} for project {project_id}")
 
@@ -933,25 +940,36 @@ async def execute_agent_task(ctx: dict, payload_dict: dict):
                 approval_handler=_approval_handler,
             )
 
-            # Plumb ``contract.max_iterations`` onto the agent runner so the
-            # cap declared on the automation actually fires. Mirrors the
-            # ``chat.py:1146`` pattern. Without this the submodule defaults
-            # to ``DEFAULT_MAX_ITERATIONS=0`` (unlimited) and a runaway
-            # tool-call loop only stops at the worker timeout (TC-04 Bug #27).
-            _max_iter = (payload.contract or {}).get("max_iterations") if payload.contract else None
-            if _max_iter is not None:
-                try:
-                    _max_iter_int = int(_max_iter)
-                except (TypeError, ValueError):
-                    _max_iter_int = None
-                if _max_iter_int is not None and _max_iter_int > 0:
-                    inner = getattr(agent_run_obj, "inner", None)
-                    if inner is not None and hasattr(inner, "max_iterations"):
-                        inner.max_iterations = _max_iter_int
-                        logger.info(
-                            "[WORKER] Applied contract.max_iterations=%d to agent runner",
-                            _max_iter_int,
-                        )
+            # Plumb iteration / timeout bounds onto the agent runner.
+            # Chat ``max_iterations`` previously never reached the worker
+            # because it was not on AgentTaskPayload; contract.max_iterations
+            # is still honoured when the chat field is unset.
+            from .services.agent_runtime import (
+                AgentRuntimeBounds,
+                AgentRuntimeResult,
+                AgentRuntimeState,
+                completion_reason_to_state,
+                create_workspace_snapshot,
+                evaluate_runtime_guards,
+                persist_trajectory_metadata,
+                resolve_max_iterations,
+                resolve_timeout_seconds,
+                runtime_state_to_task_status,
+                should_contain_host_fs,
+                stamp_workspace_context,
+                utc_now_iso,
+            )
+
+            _max_iter = resolve_max_iterations(payload)
+            if _max_iter is not None and hasattr(agent_run_obj, "max_iterations"):
+                agent_run_obj.max_iterations = _max_iter
+                logger.info("[WORKER] Applied max_iterations=%d to agent runner", _max_iter)
+            _timeout_seconds = resolve_timeout_seconds(
+                payload, default_seconds=settings.worker_job_timeout
+            )
+            _runtime_started_at = utc_now_iso()
+            _runtime_started_mono = time.monotonic()
+            await _update_task_status_redis(task_id, AgentRuntimeState.STARTING.value)
 
             # 7b. Load MCP tools for this user/agent and inject into tool registry
             mcp_context: dict | None = None
@@ -1291,6 +1309,22 @@ async def execute_agent_task(ctx: dict, payload_dict: dict):
                 "parent_task_id": payload.parent_task_id,
             }
 
+            if not workspace_root and project:
+                try:
+                    from .routers.chat_attachments import _resolve_workspace_root
+
+                    workspace_root = str(await _resolve_workspace_root(project))
+                except Exception as wr_err:
+                    logger.warning("[WORKER] workspace_root resolve failed: %s", wr_err)
+            stamp_workspace_context(
+                context,
+                workspace_root=workspace_root,
+                contain=should_contain_host_fs(
+                    deployment_mode=settings.deployment_mode,
+                    runtime=getattr(project, "runtime", None) if project else None,
+                ),
+            )
+
             # Inject MCP server configs so adapter executors can connect per-call
             if mcp_context and mcp_context.get("mcp_configs"):
                 context["mcp_configs"] = mcp_context["mcp_configs"]
@@ -1363,6 +1397,18 @@ async def execute_agent_task(ctx: dict, payload_dict: dict):
                         )
                 except Exception as ckpt_err:
                     logger.warning("[WORKER] Checkpoint failed (non-fatal): %s", ckpt_err)
+
+            if not checkpoint_hash and workspace_root:
+                try:
+                    snap = create_workspace_snapshot(workspace_root, task_id)
+                    checkpoint_hash = snap.ref
+                    logger.info(
+                        "[WORKER] Local workspace snapshot %s for task %s",
+                        checkpoint_hash,
+                        task_id,
+                    )
+                except Exception as snap_err:
+                    logger.warning("[WORKER] Local snapshot failed (non-fatal): %s", snap_err)
 
             # Update chat status to running
             chat_result = await db.execute(select(Chat).where(Chat.id == UUID(payload.chat_id)))
@@ -1667,6 +1713,7 @@ async def execute_agent_task(ctx: dict, payload_dict: dict):
                     )
 
             try:
+                await _update_task_status_redis(task_id, AgentRuntimeState.RUNNING.value)
                 async for event in agent_run_obj.run_turn(
                     effective_message, adapter_ctx, event_sink=_step_sink
                 ):
@@ -1704,6 +1751,40 @@ async def execute_agent_task(ctx: dict, payload_dict: dict):
                             },
                         )
                         break
+
+                    if event_type not in ("complete", "error", "done"):
+                        elapsed = time.monotonic() - (
+                            _runtime_started_mono
+                            if _runtime_started_mono is not None
+                            else time.monotonic()
+                        )
+                        guard_reason = evaluate_runtime_guards(
+                            cancelled=False,
+                            elapsed_seconds=elapsed,
+                            timeout_seconds=_timeout_seconds,
+                        )
+                        if guard_reason == "timed_out":
+                            logger.info(
+                                "[WORKER] Task %s timed out after %ss",
+                                task_id,
+                                _timeout_seconds,
+                            )
+                            completion_reason = "timed_out"
+                            final_response = f"Agent task timed out after {_timeout_seconds}s."
+                            if pubsub:
+                                await pubsub.publish_agent_event(
+                                    task_id,
+                                    {
+                                        "type": "complete",
+                                        "data": {
+                                            "final_response": final_response,
+                                            "iterations": iterations,
+                                            "tool_calls_made": tool_calls_made,
+                                            "completion_reason": "timed_out",
+                                        },
+                                    },
+                                )
+                            break
 
                     if event_type == "complete":
                         complete_data = event.get("data", {})
@@ -1760,6 +1841,30 @@ async def execute_agent_task(ctx: dict, payload_dict: dict):
                         task_id,
                     )
                 else:
+                    runtime_state = completion_reason_to_state(completion_reason)
+                    runtime_result = AgentRuntimeResult(
+                        execution_id=task_id,
+                        state=runtime_state,
+                        workspace_id=str(project_id) if project_id else None,
+                        workspace_root=workspace_root,
+                        user_task=(payload.message or "")[:200],
+                        model=model_name,
+                        started_at=_runtime_started_at,
+                        ended_at=utc_now_iso(),
+                        bounds=AgentRuntimeBounds(
+                            max_iterations=_max_iter,
+                            timeout_seconds=_timeout_seconds,
+                        ),
+                        iterations=iterations,
+                        tool_calls_made=tool_calls_made,
+                        event_count=event_count,
+                        completion_reason=completion_reason,
+                        checkpoint_hash=checkpoint_hash,
+                    )
+                    runtime_result.extra["session_id"] = session_id
+                    trajectory_path = persist_trajectory_metadata(workspace_root, runtime_result)
+                    if not trajectory_path and session_id:
+                        trajectory_path = f".tesslate/trajectories/trajectory_{session_id}.json"
                     stale_msg.content = final_response or "Agent task completed."
                     stale_msg.message_metadata = {
                         "agent_mode": True,
@@ -1771,11 +1876,8 @@ async def execute_agent_task(ctx: dict, payload_dict: dict):
                         "executed_by": "worker",
                         "task_id": task_id,
                         "checkpoint_hash": checkpoint_hash,
-                        "trajectory_path": (
-                            f".tesslate/trajectories/trajectory_{session_id}.json"
-                            if session_id
-                            else None
-                        ),
+                        "trajectory_path": trajectory_path,
+                        "runtime": runtime_result.to_metadata(),
                         # Steps are now in agent_steps table, not here
                         "steps_table": True,
                     }
@@ -1785,7 +1887,11 @@ async def execute_agent_task(ctx: dict, payload_dict: dict):
                 # The new owner already set status="running"; we must not
                 # flip it back to "active"/"completed".
                 if chat and not lock_stolen:
-                    chat.status = "completed" if completion_reason != "cancelled" else "active"
+                    chat.status = (
+                        "completed"
+                        if completion_reason not in ("cancelled", "timed_out", "superseded")
+                        else "active"
+                    )
                 await db.commit()
 
                 # 12b. CAS checkpoint snapshot — runs AFTER the finalize commit
@@ -1795,7 +1901,7 @@ async def execute_agent_task(ctx: dict, payload_dict: dict):
                 if (
                     project
                     and getattr(project, "volume_id", None)
-                    and completion_reason != "cancelled"
+                    and completion_reason not in ("cancelled", "timed_out", "superseded")
                 ):
                     with contextlib.suppress(Exception):
                         await asyncio.wait_for(
@@ -1909,13 +2015,27 @@ async def execute_agent_task(ctx: dict, payload_dict: dict):
                     logger.warning(f"[WORKER] Failed to cleanup bash session: {cleanup_err}")
 
             # Belt-and-suspenders: update task status in Redis directly
-            # so get_active_agent_task sees COMPLETED even if the SSE relay
-            # pod didn't call update_task_status.
-            await _update_task_status_redis(task_id, "completed")
+            # so get_active_agent_task sees the terminal state even if the
+            # SSE relay pod didn't call update_task_status.
+            if not lock_stolen:
+                runtime_state = completion_reason_to_state(completion_reason)
+                redis_status = runtime_state_to_task_status(runtime_state)
+                redis_error = None
+                if runtime_state in (
+                    AgentRuntimeState.FAILED,
+                    AgentRuntimeState.TIMED_OUT,
+                ):
+                    redis_error = (final_response or completion_reason or "")[:500]
+                await _update_task_status_redis(task_id, redis_status.value, error=redis_error)
 
-            # Mark the AgentTask ticket as completed / cancelled.
+            # Mark the AgentTask ticket as completed / cancelled / failed.
             if claimed_ticket_id is not None:
-                terminal = "cancelled" if completion_reason == "cancelled" else "completed"
+                if completion_reason in ("cancelled", "superseded"):
+                    terminal = "cancelled"
+                elif completion_reason in ("timed_out", "error", "failed"):
+                    terminal = "failed"
+                else:
+                    terminal = "completed"
                 with contextlib.suppress(Exception):
                     from .services.agent_tickets import finish_ticket
 
@@ -1928,7 +2048,12 @@ async def execute_agent_task(ctx: dict, payload_dict: dict):
             # successful. The WHERE-clause guard inside _finalize lets a
             # racing user-cancellation or contract-breach pause win.
             if auto_run_id is not None:
-                final_status = "cancelled" if completion_reason == "cancelled" else "succeeded"
+                if completion_reason in ("cancelled", "superseded"):
+                    final_status = "cancelled"
+                elif completion_reason in ("timed_out", "error", "failed"):
+                    final_status = "failed"
+                else:
+                    final_status = "succeeded"
                 await _finalize_automation_run(
                     auto_run_id,
                     status=final_status,
@@ -1950,6 +2075,7 @@ async def execute_agent_task(ctx: dict, payload_dict: dict):
             import traceback
 
             from .services.agent_approval import ApprovalRequired
+            from .services.agent_runtime import AgentRuntimeState
 
             if isinstance(e, ApprovalRequired):
                 # Tool hit an approval gate: ticket is already flipped to
@@ -1960,6 +2086,7 @@ async def execute_agent_task(ctx: dict, payload_dict: dict):
                     task_id,
                     e.tool_name,
                 )
+                await _update_task_status_redis(task_id, AgentRuntimeState.WAITING.value)
                 with contextlib.suppress(Exception):
                     if pubsub:
                         await pubsub.publish_agent_event(
@@ -2247,7 +2374,16 @@ async def _update_task_status_redis(task_id: str, status: str, error: str | None
 
         data = json.loads(raw)
         data["status"] = status
-        data["completed_at"] = datetime.now(UTC).isoformat()
+        from .services.task_manager import TaskStatus
+
+        try:
+            parsed = TaskStatus(status)
+        except ValueError:
+            parsed = None
+        if parsed in TaskStatus.in_flight() and not data.get("started_at"):
+            data["started_at"] = datetime.now(UTC).isoformat()
+        if parsed in TaskStatus.terminal() or parsed is None:
+            data["completed_at"] = datetime.now(UTC).isoformat()
         if error:
             data["error"] = error
 

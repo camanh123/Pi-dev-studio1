@@ -495,13 +495,27 @@ def _resolve_run_id(context: dict[str, Any]) -> str | None:
 def _resolve_cwd(context: dict[str, Any], params_cwd: str | None) -> str:
     """Resolve a working directory for the spawned process.
 
-    ``params_cwd`` — when provided — is treated as relative to the
-    project root (``context["cwd"]`` or ``$PROJECT_ROOT`` or the current
-    process ``cwd``). Absolute paths are silently joined under the root.
+    When ``contain_fs_to_workspace`` is set (desktop/local host FS), the
+    resolved cwd is refused if it would escape the assigned workspace.
+    Absolute paths outside the workspace raise ``WorkspaceContainmentError``
+    rather than being silently accepted.
+
+    Docker/K8s shells run inside the project container and do not set
+    that flag, so in-container cwds such as ``/app`` keep working.
     """
     import os
 
-    base = context.get("cwd") or os.environ.get("PROJECT_ROOT") or os.getcwd()
+    from ....services.agent_runtime import resolve_contained_path
+
+    base = (
+        context.get("cwd")
+        or context.get("workspace_root")
+        or os.environ.get("PROJECT_ROOT")
+        or os.getcwd()
+    )
+    if context.get("contain_fs_to_workspace"):
+        root = context.get("workspace_root") or base
+        return str(resolve_contained_path(root, params_cwd))
     if not params_cwd:
         return base
     candidate = os.path.join(base, params_cwd) if not os.path.isabs(params_cwd) else params_cwd

@@ -794,6 +794,7 @@ class AgentChatRequest(BaseModel):
     container_id: UUID | None = None  # If set, agent is scoped to this container (files at root)
     chat_id: UUID | None = None  # Target a specific chat session
     max_iterations: int | None = None  # None = unlimited
+    timeout_seconds: int | None = None  # None = worker default
     minimal_prompts: bool | None = False
     edit_mode: str | None = "ask"  # Edit control mode: 'allow', 'ask', 'plan' (default: ask)
     view_context: str | None = None  # UI view context: 'graph', 'builder', 'terminal', 'kanban'

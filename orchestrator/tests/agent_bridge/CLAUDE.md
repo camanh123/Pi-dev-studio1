@@ -7,7 +7,8 @@ orchestrator and the agent package without booting a full agent run.
 
 ## Key files
 - `test_bridge_import.py` — import smoke test + construction smoke test
-- `test_bridge_runs_turn.py` — end-to-end run_turn contract test
+- `test_bridge_runs_turn.py` — run_turn / run contract, in-tree TesslateAgent
+  invocation, event_sink error propagation, workspace stamping
 
 ## Related contexts
 - `/orchestrator/app/services/tesslate_agent_adapter.py`

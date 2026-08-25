@@ -2,7 +2,7 @@
 
 **Purpose**: Orchestrator-side agent tool registry and execution machinery.
 
-The inline agent runner (StreamAgent, IterativeAgent, ReActAgent, TesslateAgent) has been removed from `orchestrator/app/agent/`. The active agent runner lives in the `packages/tesslate-agent` submodule and is invoked through `orchestrator/app/services/tesslate_agent_adapter.py`.
+The inline agent runner (StreamAgent, IterativeAgent, ReActAgent, TesslateAgent) has been removed from `orchestrator/app/agent/`. The active agent runner lives in in-tree `packages/tesslate-agent` and is invoked through `orchestrator/app/services/tesslate_agent_adapter.py`. The Phase 1 runtime contract (`orchestrator/app/services/agent_runtime.py`) is the stable status / bounds / workspace / trajectory layer the worker and adapter share.
 
 What remains in `orchestrator/app/agent/` is the first-party tool layer that the submodule and external callers register against:
 

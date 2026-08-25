@@ -60,6 +60,28 @@ logger = logging.getLogger(__name__)
 limiter = Limiter(key_func=get_remote_address)
 
 
+async def _attach_workspace(context: dict, project) -> None:
+    """Stamp workspace_root / containment flags onto an agent tool context."""
+    if not project:
+        return
+    from ..services.agent_runtime import should_contain_host_fs, stamp_workspace_context
+    from .chat_attachments import _resolve_workspace_root
+
+    try:
+        root = str(await _resolve_workspace_root(project))
+    except Exception:
+        logger.debug("workspace_root resolve failed", exc_info=True)
+        return
+    stamp_workspace_context(
+        context,
+        workspace_root=root,
+        contain=should_contain_host_fs(
+            deployment_mode=settings.deployment_mode,
+            runtime=getattr(project, "runtime", None),
+        ),
+    )
+
+
 # ARQ Redis pool (lazy initialized)
 _arq_pool = None
 
@@ -1292,6 +1314,7 @@ async def agent_chat(
             "environment_status": project.environment_status,
             "containers": _tier_snapshot.get("containers", []),
         }
+        await _attach_workspace(context, project)
 
         # Build project context and inject TESSLATE.md for the system prompt
         context["project_context"] = {
@@ -1920,6 +1943,7 @@ async def agent_chat_stream(
                 "mention_data_collection_refs": _ctx_mention_data_refs,
                 "mention_project_ids": _ctx_mention_project_ids,
             }
+            await _attach_workspace(context, project)
 
             # ================================================================
             # Dispatch: ARQ Worker (if Redis available) or In-Process
@@ -2016,6 +2040,8 @@ async def agent_chat_stream(
                     mention_app_instance_ids=_mention_app_instance_ids,
                     mention_data_collection_refs=_mention_data_collection_refs,
                     mention_project_ids=_mention_project_ids,
+                    max_iterations=request.max_iterations,
+                    timeout_seconds=request.timeout_seconds,
                 )
 
                 # Enqueue the job
@@ -2040,6 +2066,7 @@ async def agent_chat_stream(
 
                 # Subscribe to Redis Pub/Sub and relay events to SSE
                 pubsub = get_pubsub()
+                terminal_status = TaskStatus.COMPLETED
                 if pubsub:
                     # Emit task_started so the client knows the task_id for cancellation
                     yield f"data: {json.dumps({'type': 'task_started', 'data': {'task_id': agent_task_id}})}\n\n"
@@ -2047,6 +2074,18 @@ async def agent_chat_stream(
                     try:
                         async for event in pubsub.subscribe_agent_events(agent_task_id):
                             event_type = event.get("type", "unknown")
+                            if event_type == "complete":
+                                from ..services.agent_runtime import (
+                                    completion_reason_to_state,
+                                    runtime_state_to_task_status,
+                                )
+
+                                reason = (event.get("data") or {}).get("completion_reason")
+                                terminal_status = runtime_state_to_task_status(
+                                    completion_reason_to_state(reason)
+                                )
+                            elif event_type == "error":
+                                terminal_status = TaskStatus.FAILED
                             if event_type == "done":
                                 # Worker finished — don't forward "done" meta-event
                                 break
@@ -2067,9 +2106,9 @@ async def agent_chat_stream(
                             )
                         return
 
-                # Worker finished — mark task COMPLETED so get_active_agent_task
-                # returns null when the project is reopened.
-                await task_manager.update_task_status(agent_task_id, TaskStatus.COMPLETED)
+                # Worker finished — mark the terminal runtime state so
+                # get_active_agent_task does not report a finished run as live.
+                await task_manager.update_task_status(agent_task_id, terminal_status)
                 logger.info(f"[SSE-AGENT] Worker-based streaming complete for task {agent_task_id}")
 
             else:
@@ -2359,10 +2398,10 @@ async def get_active_agent_task(
             started_aware = started.replace(tzinfo=UTC) if started.tzinfo is None else started
             if (now - started_aware) > staleness_limit:
                 logger.warning(
-                    f"[AGENT-ACTIVE] Stale task {task.id} exceeded timeout, marking FAILED"
+                    f"[AGENT-ACTIVE] Stale task {task.id} exceeded timeout, marking TIMED_OUT"
                 )
                 await task_manager.update_task_status(
-                    task.id, TaskStatus.FAILED, error="Task exceeded timeout (stale)"
+                    task.id, TaskStatus.TIMED_OUT, error="Task exceeded timeout (stale)"
                 )
                 continue
 
@@ -3165,6 +3204,7 @@ async def handle_chat_message(data: dict, user: User, db: AsyncSession, websocke
         "environment_status": project.environment_status if project else None,
         "containers": _tier_snapshot.get("containers", []),
     }
+    await _attach_workspace(execution_context, project)
 
     if project:
         execution_context["project_context"] = {

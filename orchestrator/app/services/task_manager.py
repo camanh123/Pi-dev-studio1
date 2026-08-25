@@ -28,13 +28,30 @@ TASK_TTL = 86400  # 24 hours
 
 
 class TaskStatus(StrEnum):
-    """Task execution statuses"""
+    """Task execution statuses.
+
+    ``starting``, ``waiting``, and ``timed_out`` are additive runtime
+    states used by the agent worker. Existing clients that only know
+    queued/running/completed/failed/cancelled keep working — new values
+    appear only for agent executions that opt into the Phase 1 contract.
+    """
 
     QUEUED = "queued"
+    STARTING = "starting"
     RUNNING = "running"
+    WAITING = "waiting"
     COMPLETED = "completed"
     FAILED = "failed"
     CANCELLED = "cancelled"
+    TIMED_OUT = "timed_out"
+
+    @classmethod
+    def in_flight(cls) -> tuple["TaskStatus", ...]:
+        return (cls.QUEUED, cls.STARTING, cls.RUNNING, cls.WAITING)
+
+    @classmethod
+    def terminal(cls) -> tuple["TaskStatus", ...]:
+        return (cls.COMPLETED, cls.FAILED, cls.CANCELLED, cls.TIMED_OUT)
 
 
 @dataclass
@@ -299,7 +316,7 @@ class TaskManager:
         tasks = [self._tasks[tid] for tid in task_ids if tid in self._tasks]
 
         if active_only:
-            tasks = [t for t in tasks if t.status in (TaskStatus.QUEUED, TaskStatus.RUNNING)]
+            tasks = [t for t in tasks if t.status in TaskStatus.in_flight()]
 
         return sorted(tasks, key=lambda t: t.created_at, reverse=True)
 
@@ -352,11 +369,10 @@ class TaskManager:
                         task = self._tasks[tid]
                         # Reconcile: trust Redis for terminal status (worker is authority)
                         redis_status = TaskStatus(redis_data["status"])
-                        if redis_status in (
-                            TaskStatus.COMPLETED,
-                            TaskStatus.FAILED,
-                            TaskStatus.CANCELLED,
-                        ) and task.status in (TaskStatus.QUEUED, TaskStatus.RUNNING):
+                        if (
+                            redis_status in TaskStatus.terminal()
+                            and task.status in TaskStatus.in_flight()
+                        ):
                             task.status = redis_status
                             task.completed_at = (
                                 datetime.fromisoformat(redis_data["completed_at"])
@@ -368,7 +384,7 @@ class TaskManager:
                     else:
                         task = Task.from_dict(redis_data)
                         self._tasks[tid] = task  # cache locally
-                    if active_only and task.status not in (TaskStatus.QUEUED, TaskStatus.RUNNING):
+                    if active_only and task.status not in TaskStatus.in_flight():
                         ids_to_prune.append(tid)
                         continue
                     tasks.append(task)
@@ -378,10 +394,7 @@ class TaskManager:
                 for tid in all_task_ids:
                     task = await self.get_task_async(tid)
                     if task:
-                        if active_only and task.status not in (
-                            TaskStatus.QUEUED,
-                            TaskStatus.RUNNING,
-                        ):
+                        if active_only and task.status not in TaskStatus.in_flight():
                             ids_to_prune.append(tid)
                             continue
                         tasks.append(task)
@@ -390,7 +403,7 @@ class TaskManager:
             for tid in all_task_ids:
                 task = self._tasks.get(tid)
                 if task:
-                    if active_only and task.status not in (TaskStatus.QUEUED, TaskStatus.RUNNING):
+                    if active_only and task.status not in TaskStatus.in_flight():
                         continue
                     tasks.append(task)
 
@@ -428,10 +441,13 @@ class TaskManager:
 
             task.status = status
 
-            if status == TaskStatus.RUNNING and not task.started_at:
+            if (
+                status in (TaskStatus.STARTING, TaskStatus.RUNNING, TaskStatus.WAITING)
+                and not task.started_at
+            ):
                 task.started_at = datetime.utcnow()
 
-            if status in (TaskStatus.COMPLETED, TaskStatus.FAILED, TaskStatus.CANCELLED):
+            if status in TaskStatus.terminal():
                 task.completed_at = datetime.utcnow()
                 if error:
                     task.error = error

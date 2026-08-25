@@ -83,6 +83,8 @@ class CheckpointManager:
                 logger.error("[CHECKPOINT] vol: restore requires db session")
                 return False
             return await self._restore_volume_fork(ref[4:], db)
+        elif ref.startswith("local:"):
+            return await self._restore_local_snapshot(ref)
         else:
             # Legacy: bare 40-char hash (pre-prefix format)
             if _HASH_RE.match(ref):
@@ -200,6 +202,38 @@ class CheckpointManager:
         except Exception as exc:
             logger.warning("[CHECKPOINT] volume fork failed: %s", exc)
             return None
+
+    async def _restore_local_snapshot(self, ref: str) -> bool:
+        """Restore a host-FS snapshot written by ``agent_runtime``."""
+        from .agent_runtime import restore_workspace_snapshot
+        from .project_fs import get_project_fs_path
+
+        try:
+            from sqlalchemy import select
+
+            from ..database import AsyncSessionLocal
+            from ..models import Project
+        except Exception:
+            logger.exception("[CHECKPOINT] local restore import failed")
+            return False
+
+        try:
+            async with AsyncSessionLocal() as db:
+                result = await db.execute(
+                    select(Project).where(Project.id == UUID(self.project_id))
+                )
+                project = result.scalar_one_or_none()
+            if project is None:
+                logger.error("[CHECKPOINT] Project %s not found", self.project_id)
+                return False
+            fs_path = get_project_fs_path(project)
+            if fs_path is None:
+                logger.error("[CHECKPOINT] Project %s has no host filesystem path", self.project_id)
+                return False
+            return restore_workspace_snapshot(fs_path, ref)
+        except Exception as exc:
+            logger.error("[CHECKPOINT] local snapshot restore failed: %s", exc)
+            return False
 
     async def _restore_volume_fork(self, fork_volume_id: str, db) -> bool:
         """Restore by swapping project.volume_id to the checkpoint fork.

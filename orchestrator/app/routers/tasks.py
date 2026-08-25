@@ -60,7 +60,7 @@ async def cancel_task(task_id: str, current_user: User = Depends(current_active_
     if task.user_id != current_user.id:
         raise HTTPException(status_code=403, detail="Access denied")
 
-    if task.status not in (TaskStatus.QUEUED, TaskStatus.RUNNING):
+    if task.status not in TaskStatus.in_flight():
         raise HTTPException(status_code=400, detail="Task cannot be cancelled")
 
     # Cancel the background task

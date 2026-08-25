@@ -1,14 +1,17 @@
 """Adapter between the orchestrator and the ``tesslate-agent`` package.
 
 Responsibilities:
-    1. Re-export the submodule's ``TesslateAgent`` + ``AbstractAgent`` with
+    1. Re-export the package's ``TesslateAgent`` + ``AbstractAgent`` with
        stable local names (``TesslateAgentAdapter.inner`` preserves the raw
-       submodule instance for callers that need direct access).
+       instance for callers that need direct access).
     2. ``run_turn()`` drives a single request/response cycle against the
-       submodule runner, yielding every event. Callers pass an optional
+       in-tree runner, yielding every event. Callers pass an optional
        ``event_sink`` to handle per-event side-effects (e.g. ``AgentStep``
-       persistence) without coupling the submodule to orchestrator internals.
-    3. ``AgentAdapterContext`` is the neutral invocation envelope shared by
+       persistence) without coupling tesslate-agent to orchestrator internals.
+    3. ``run()`` is the chat/in-process compatible alias: it accepts the
+       historical ``(message, context_dict)`` signature and yields the
+       same event stream.
+    4. ``AgentAdapterContext`` is the neutral invocation envelope shared by
        routers and the worker.
 """
 
@@ -21,6 +24,8 @@ from typing import Any
 
 from tesslate_agent.agent.base import AbstractAgent
 from tesslate_agent.agent.tesslate_agent import TesslateAgent
+
+from .agent_runtime import stamp_workspace_context
 
 logger = logging.getLogger(__name__)
 
@@ -38,10 +43,10 @@ class AgentAdapterContext:
 class TesslateAgentAdapter:
     """Thin wrapper around ``TesslateAgent`` for orchestrator-side use.
 
-    Construction mirrors ``TesslateAgent.__init__``. The wrapper exists so
-    orchestrator call sites depend on a local class name; once trajectory
-    persistence and tool-registry plumbing are wired, only this module
-    changes.
+    Construction mirrors ``TesslateAgent.__init__``. Orchestrator call sites
+    depend on this local class so trajectory persistence, workspace
+    stamping, and iteration bounds can change here without touching every
+    router.
     """
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
@@ -55,6 +60,45 @@ class TesslateAgentAdapter:
     def tools(self) -> Any:
         return self._inner.tools
 
+    @property
+    def max_iterations(self) -> int:
+        return int(getattr(self._inner, "max_iterations", 0) or 0)
+
+    @max_iterations.setter
+    def max_iterations(self, value: int | None) -> None:
+        # tesslate-agent treats 0 as unlimited.
+        capped = int(value) if value else 0
+        if hasattr(self._inner, "max_iterations"):
+            self._inner.max_iterations = capped if capped > 0 else 0
+
+    @property
+    def minimal_prompts(self) -> bool:
+        return bool(getattr(self._inner, "minimal_prompts", False))
+
+    @minimal_prompts.setter
+    def minimal_prompts(self, value: bool) -> None:
+        if hasattr(self._inner, "minimal_prompts"):
+            self._inner.minimal_prompts = bool(value)
+
+    async def run(
+        self,
+        user_request: str,
+        context: AgentAdapterContext | dict[str, Any],
+        event_sink: EventSink | None = None,
+        **_kwargs: Any,
+    ) -> AsyncIterator[dict[str, Any]]:
+        """Chat/in-process compatible entrypoint.
+
+        Historical callers invoke ``agent.run(message, context_dict)``.
+        The worker uses ``run_turn`` with ``AgentAdapterContext``. Both
+        paths share the same event stream and workspace stamping.
+        """
+        adapter_ctx = (
+            context if isinstance(context, AgentAdapterContext) else _context_from_mapping(context)
+        )
+        async for event in self.run_turn(user_request, adapter_ctx, event_sink=event_sink):
+            yield event
+
     async def run_turn(
         self,
         user_request: str,
@@ -64,30 +108,52 @@ class TesslateAgentAdapter:
     ) -> AsyncIterator[dict[str, Any]]:
         """Drive a single agent turn, yielding every event.
 
-        Yields each event emitted by the submodule runner so callers can
+        Yields each event emitted by the in-tree runner so callers can
         interleave cancellation checks, pubsub publishing, or other
         per-event work. If ``event_sink`` is provided it is awaited on
         each event before yielding — this is how the orchestrator persists
-        trajectory events as ``AgentStep`` rows without coupling the
-        submodule to that plumbing.
+        trajectory events as ``AgentStep`` rows without coupling
+        tesslate-agent to that plumbing.
+
+        ``event_sink`` errors propagate. Swallowing them hid persistence
+        failures and left the run looking successful.
         """
-        # Build the context dict the submodule agent expects from the frozen
-        # AgentAdapterContext dataclass (which has no to_submodule_context()).
-        ctx: dict[str, Any] = {
-            "project_id": adapter_context.project_id,
-            "user_id": adapter_context.user_id,
-        }
-        if adapter_context.goal_ancestry:
-            ctx["goal_ancestry"] = adapter_context.goal_ancestry
-        if adapter_context.extra:
-            ctx.update(adapter_context.extra)
+        ctx = _build_submodule_context(adapter_context)
         async for event in _iter_events(self._inner, user_request, ctx):
             if event_sink is not None:
-                try:
-                    await event_sink(event)
-                except Exception as exc:
-                    logger.debug("event_sink raised; swallowing: %s", exc)
+                await event_sink(event)
             yield event
+
+
+def _context_from_mapping(context: dict[str, Any]) -> AgentAdapterContext:
+    extra = dict(context)
+    return AgentAdapterContext(
+        project_id=str(extra.get("project_id") or ""),
+        user_id=str(extra.get("user_id") or ""),
+        extra=extra,
+    )
+
+
+def _build_submodule_context(adapter_context: AgentAdapterContext) -> dict[str, Any]:
+    """Build the dict tesslate-agent.TesslateAgent.run() expects."""
+    ctx: dict[str, Any] = {
+        "project_id": adapter_context.project_id,
+        "user_id": adapter_context.user_id,
+    }
+    if adapter_context.goal_ancestry:
+        ctx["goal_ancestry"] = adapter_context.goal_ancestry
+    if adapter_context.extra:
+        ctx.update(adapter_context.extra)
+
+    workspace_root = ctx.get("workspace_root") or ctx.get("cwd")
+    contain = bool(ctx.get("contain_fs_to_workspace"))
+    if workspace_root:
+        stamp_workspace_context(
+            ctx,
+            workspace_root=str(workspace_root),
+            contain=contain,
+        )
+    return ctx
 
 
 async def _iter_events(
