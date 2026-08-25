@@ -34,6 +34,7 @@ See `agent-internals.md` (parent dir) for the full `ToolRegistry.execute` pipeli
 | `web_ops/` | `web_fetch`, `web_search`, `send_message` | [web-search.md](web-search.md), [web-ops.md](web-ops.md) |
 | `skill_ops/` | `load_skill` | [skill-ops.md](skill-ops.md) |
 | `schedule_ops/` | `manage_schedule` | [schedule-ops.md](schedule-ops.md) |
+| `pi_ops/` | `pi.capability_check` (`pi_capability_check`) | [docs/pi/capability-check.md](../../../pi/capability-check.md) |
 | `node_config/` | `request_node_config`, `run_with_secrets` | [node-config.md](node-config.md) |
 | `graph_ops/` (view-scoped) | `graph_start_container`, `graph_stop_container`, `graph_add_container`, `graph_add_connection`, `graph_add_browser_preview`, `graph_shell_*` | [graph-ops.md](graph-ops.md), [view-scoped-tools.md](view-scoped-tools.md), [view-scoped-quick-reference.md](view-scoped-quick-reference.md) |
 

@@ -10,6 +10,12 @@ Public query surface for later Pi Agent Tools:
 * ``evaluate(id, environment)`` / ``can_generate(id, environment)``
 """
 
+from app.services.pi_capabilities.generation_policy import (
+    GenerationGate,
+    PiGenerationBlockedError,
+    enforce_pi_generation,
+    require_pi_generation,
+)
 from app.services.pi_capabilities.models import (
     PHASE2_BASELINE_DATE,
     PI_USER_ME_URL,
@@ -32,6 +38,11 @@ from app.services.pi_capabilities.registry import (
     evaluate,
     get_registry,
 )
+from app.services.pi_capabilities.studio_tools import (
+    STUDIO_PI_TOOLS,
+    StudioToolAvailability,
+    StudioToolRecord,
+)
 
 __all__ = [
     "PHASE2_BASELINE_DATE",
@@ -51,5 +62,12 @@ __all__ = [
     "StudioImplementationStatus",
     "can_generate",
     "evaluate",
+    "enforce_pi_generation",
     "get_registry",
+    "require_pi_generation",
+    "GenerationGate",
+    "PiGenerationBlockedError",
+    "STUDIO_PI_TOOLS",
+    "StudioToolAvailability",
+    "StudioToolRecord",
 ]

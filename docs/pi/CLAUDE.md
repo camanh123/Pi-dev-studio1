@@ -21,8 +21,11 @@ A capability being SUPPORTED on Pi Network does **not** mean Pi Dev Studio has i
 - `orchestrator/app/services/pi_capabilities/models.py` — enums and records
 - `orchestrator/app/services/pi_capabilities/catalog.py` — canonical capability list
 - `orchestrator/app/services/pi_capabilities/registry.py` — query + `can_generate` guard
+- `orchestrator/app/services/pi_capabilities/generation_policy.py` — pre-generation ALLOW / ALLOW_WITH_WARNING / BLOCK gate
+- `orchestrator/app/agent/tools/pi_ops/capability_check.py` — agent tool `pi.capability_check`
 - `orchestrator/tests/services/test_pi_capability_registry.py` — Phase 2 tests
 - `docs/pi/capability-registry.md` — human-readable truth-layer documentation
+- `docs/pi/capability-check.md` — agent guard tool
 
 ## Guard
 
@@ -38,8 +41,13 @@ can_generate("UNKNOWN_CAPABILITY")                      # BLOCK
 
 LIMITED never maps to ALLOW.
 
+## Agent tool
+
+`pi.capability_check` (registered as `pi_capability_check`) is the Phase 3A read-only guard. See [capability-check.md](capability-check.md). It does not authenticate, pay, or call Pi APIs.
+
 ## Related Contexts
 
 - `docs/pi/capability-registry.md` — platform fact vs Studio implementation
+- `docs/pi/capability-check.md` — agent-visible capability guard tool
 - `docs/orchestrator/agent/CLAUDE.md` — agent runtime (do not redesign in later Pi phases)
 - `docs/orchestrator/services/CLAUDE.md` — services layer

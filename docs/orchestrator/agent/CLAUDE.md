@@ -43,6 +43,7 @@ What remains in `orchestrator/app/agent/` is the first-party tool layer that the
 | `web_ops/` | `web_fetch`, `web_search`, `send_message` | `register_all_web_tools` | `tools/web-search.md`, `tools/web-ops.md` |
 | `skill_ops/` | `load_skill` | `register_all_skill_tools` | `tools/skill-ops.md` |
 | `schedule_ops/` | `manage_schedule` | `register_schedule_ops_tools` | `tools/schedule-ops.md` |
+| `pi_ops/` | `pi.capability_check` | `register_all_pi_tools` | `docs/pi/capability-check.md` |
 | `node_config/` | `request_node_config`, `run_with_secrets` | `register_all_node_config_tools` | `tools/node-config.md` |
 | `graph_ops/` | `graph_start_container`, `graph_stop_container`, `graph_add_container`, `graph_add_connection`, `graph_add_browser_preview`, `graph_shell_*` | `register_all_graph_tools` (via `GraphToolProvider`) | `tools/graph-ops.md` |
 

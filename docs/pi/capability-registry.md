@@ -15,6 +15,8 @@ Pi Dev Studio Phase 2 implements the registry only. It does **not** implement Pi
 
 A feature being supported by Pi Network does **not** automatically mean Pi Dev Studio has implemented a tool for it. In this baseline every capability is `studio_status=NOT_IMPLEMENTED`.
 
+The Phase 3A agent tool `pi.capability_check` is Studio **infrastructure**. It does not change those capability `studio_status` values. See [capability-check.md](capability-check.md).
+
 ## Canonical capabilities
 
 | ID | Platform status | Notes |

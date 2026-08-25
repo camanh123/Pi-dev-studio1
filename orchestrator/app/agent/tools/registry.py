@@ -162,6 +162,11 @@ class ToolRegistry:
 
     def __init__(self):
         self._tools: dict[str, Tool] = {}
+        # Public semantic names (e.g. ``pi.capability_check``) that resolve to
+        # an LLM-safe registered name (``pi_capability_check``). OpenAI-style
+        # function names reject dots; aliases preserve the public name without
+        # a second registry.
+        self._aliases: dict[str, str] = {}
         logger.info("ToolRegistry initialized")
 
     def register(self, tool: Tool):
@@ -171,9 +176,25 @@ class ToolRegistry:
         self._tools[tool.name] = tool
         logger.info(f"Registered tool: {tool.name} (category: {tool.category.value})")
 
+    def register_alias(self, alias: str, canonical_name: str) -> None:
+        """Expose ``alias`` as a lookup name for an already registered tool."""
+        self._aliases[alias] = canonical_name
+
     def get(self, name: str) -> Tool | None:
-        """Get a tool by name."""
-        return self._tools.get(name)
+        """Get a tool by registered name or public alias."""
+        tool = self._tools.get(name)
+        if tool is not None:
+            return tool
+        canonical = self._aliases.get(name)
+        if canonical is None:
+            return None
+        return self._tools.get(canonical)
+
+    def visible_tool_names(self) -> list[str]:
+        """Registered names plus public aliases the agent may use."""
+        names = list(self._tools.keys())
+        names.extend(alias for alias in self._aliases if self._aliases[alias] in self._tools)
+        return names
 
     def list_tools(self, category: ToolCategory | None = None) -> list[Tool]:
         """
@@ -511,8 +532,7 @@ async def check_contract_gate(
         "success": False,
         "tool": tool_name,
         "error": (
-            f"ContractGate denied tool '{tool_name}' "
-            f"({decision.breach_kind}): {decision.reason}"
+            f"ContractGate denied tool '{tool_name}' ({decision.breach_kind}): {decision.reason}"
         ),
         "contract_breach": {
             "kind": decision.breach_kind,
@@ -584,6 +604,7 @@ def _register_all_tools(registry: ToolRegistry):
     from .memory_ops import register_memory_ops_tools
     from .nav_ops import register_nav_ops_tools
     from .node_config import register_all_node_config_tools
+    from .pi_ops import register_all_pi_tools
     from .planning_ops import register_all_planning_tools
     from .project_ops import register_all_project_tools
     from .shell_ops import register_all_shell_tools
@@ -613,6 +634,8 @@ def _register_all_tools(registry: ToolRegistry):
     register_all_web_tools(registry)
     # Skill ops: load_skill
     register_all_skill_tools(registry)
+    # Pi ops: pi.capability_check (read-only Phase 2 registry guard)
+    register_all_pi_tools(registry)
     # Node config ops: request_node_config, run_with_secrets
     register_all_node_config_tools(registry)
     # Workspace ops: request_workspace — pause and prompt the user to attach
@@ -688,6 +711,9 @@ def create_scoped_tool_registry(
                 logger.info(f"Registered tool '{name}' with custom configuration")
             else:
                 scoped_registry.register(tool)
+            for alias, canonical in global_registry._aliases.items():
+                if canonical == tool.name:
+                    scoped_registry.register_alias(alias, tool.name)
         else:
             missing_tools.append(name)
             logger.warning(f"Tool '{name}' not found in global registry")
