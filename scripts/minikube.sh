@@ -192,10 +192,8 @@ _ensure_nginx_snippets() {
   success "NGINX snippet annotations enabled"
 }
 
-# Ensure git submodules are present on disk. The orchestrator Dockerfile
-# COPYs packages/tesslate-agent into the image; an uninitialized submodule
-# ships an empty directory and fails every agent run with
-# "No module named 'tesslate_agent'". Idempotent — no-op when already synced.
+# packages/tesslate-agent is in-tree source. Keep this guard so any future
+# git submodules still get initialized before image builds.
 _ensure_submodules() {
   if [[ -f "$PROJECT_ROOT/.gitmodules" ]]; then
     if ! (cd "$PROJECT_ROOT" && git submodule update --init --recursive); then

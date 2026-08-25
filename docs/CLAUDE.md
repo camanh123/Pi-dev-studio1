@@ -186,7 +186,7 @@ Load this root CLAUDE.md when:
 | Desktop TUI / headless agent | [desktop/tui.md](desktop/tui.md) |
 | Local ↔ cloud sync | [desktop/sync.md](desktop/sync.md) |
 | Tesslate Apps (publish/install/approval) | [apps/CLAUDE.md](apps/CLAUDE.md) |
-| packages/ submodules | [packages/CLAUDE.md](packages/CLAUDE.md) |
+| packages/ in-tree libraries | [packages/CLAUDE.md](packages/CLAUDE.md) |
 | Top-level TypeScript SDK (`sdk/`) | [sdk/CLAUDE.md](sdk/CLAUDE.md) |
 | Task queue (cloud vs desktop) | [orchestrator/services/task-queue.md](orchestrator/services/task-queue.md) |
 | Cloud client + project sync service | [orchestrator/services/cloud-client.md](orchestrator/services/cloud-client.md) |

@@ -41,7 +41,7 @@ Triggers on tags `desktop-v*` or manual dispatch. Matrix build across four runne
 | `windows-x64` | `windows-latest` | `x86_64-pc-windows-msvc` |
 | `linux-x64` | `ubuntu-22.04` | `x86_64-unknown-linux-gnu` |
 
-Steps: checkout with submodules, Linux system deps (webkit, appindicator, rsvg, patchelf, ssl, pkg-config) on Linux only, Rust toolchain with target, `Swatinem/rust-cache` workspaces `desktop/src-tauri`, Node 20 + `pnpm@9`, Python 3.11, install sidecar build deps (including PyInstaller), run `alembic upgrade head` against a fresh SQLite smoke DB, `python build_sidecar.py`, `cargo install tauri-cli --version '^2.0' --locked`, `cargo tauri build --target <matrix.target>`.
+Steps: checkout, Linux system deps (webkit, appindicator, rsvg, patchelf, ssl, pkg-config) on Linux only, Rust toolchain with target, `Swatinem/rust-cache` workspaces `desktop/src-tauri`, Node 20 + `pnpm@9`, Python 3.11, install sidecar build deps (including PyInstaller), run `alembic upgrade head` against a fresh SQLite smoke DB, `python build_sidecar.py`, `cargo install tauri-cli --version '^2.0' --locked`, `cargo tauri build --target <matrix.target>`.
 
 Signing secrets are all optional with `||''` fallbacks so unsigned builds still succeed:
 

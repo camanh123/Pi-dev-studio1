@@ -548,11 +548,8 @@ case "$COMMAND" in
         info "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
         echo
 
-        # Ensure git submodules are present on disk — the orchestrator
-        # Dockerfile COPYs packages/tesslate-agent into the image and pip
-        # installs it. An uninitialized submodule yields an empty
-        # directory, shipping a broken image that fails every agent run
-        # with "No module named 'tesslate_agent'".
+        # packages/tesslate-agent is in-tree source. Keep this guard so any
+        # future git submodules still get initialized before image builds.
         if [ -f "$PROJECT_ROOT/.gitmodules" ]; then
             info "Syncing git submodules..."
             (cd "$PROJECT_ROOT" && git submodule update --init --recursive) \

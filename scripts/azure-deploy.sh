@@ -503,7 +503,8 @@ case "$COMMAND" in
         info "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
         echo
 
-        # Ensure git submodules are present
+        # packages/tesslate-agent is in-tree source. Keep this guard so any
+        # future git submodules still get initialized before image builds.
         if [ -f "$PROJECT_ROOT/.gitmodules" ]; then
             info "Syncing git submodules..."
             (cd "$PROJECT_ROOT" && git submodule update --init --recursive) \

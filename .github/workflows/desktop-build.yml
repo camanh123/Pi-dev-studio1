@@ -44,8 +44,6 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-        with:
-          submodules: true
 
       # ── Linux system deps ─────────────────────────────────────────────────
       - name: Install Linux system deps

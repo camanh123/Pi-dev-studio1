@@ -28,7 +28,7 @@ remember the sidecar rebuild / cargo-tauri install / vite-start dance.
 New developers should start at
 [/docs/desktop/development.md](../../docs/desktop/development.md) for
 the toolchain install (rustup, cargo-tauri, Linux sysdeps, PyInstaller)
-and the one-time orchestrator + submodule editable installs.
+and the one-time orchestrator + tesslate-agent editable installs.
 
 ## When to load
 Running or modifying desktop build/dev flows.

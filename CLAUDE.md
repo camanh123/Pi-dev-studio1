@@ -106,7 +106,7 @@ AI-powered web application builder that lets users create, edit, deploy, and man
 | Frontend | React 19, TypeScript, Vite, Tailwind, Monaco Editor |
 | Desktop shell | Tauri v2 (Rust), tauri-plugin-stronghold, tray, deep-link, updater |
 | Backend | FastAPI, Python 3.11, SQLAlchemy, LiteLLM |
-| Agent runner | `packages/tesslate-agent` (Python submodule) |
+| Agent runner | `packages/tesslate-agent` (in-tree Python package) |
 | Database | PostgreSQL/asyncpg (cloud), SQLite/aiosqlite (desktop) |
 | Task Queue | Redis 7.x + ARQ (cloud), asyncio + apscheduler (desktop) |
 | Containers | Docker Compose (dev), Kubernetes (prod), Local subprocesses (desktop) |
@@ -217,7 +217,7 @@ Gateway runner → services/gateway/runner.py
 ```
 tesslate-studio/
 ├── desktop/         # Tauri v2 shell — src-tauri (Rust), sidecar (PyInstaller), scripts
-├── packages/        # Submodules: tesslate-agent, tesslate-app-sdk, tesslate-embed-sdk
+├── packages/        # In-tree packages: tesslate-agent, tesslate-app-sdk, tesslate-embed-sdk
 ├── orchestrator/    # FastAPI backend — routers/, services/, agent/, seeds/, worker.py
 ├── app/             # React frontend — pages/, components/, contexts/, layouts/, lib/
 ├── k8s/             # Kubernetes (Kustomize) — base/, overlays/, terraform/, scripts/
@@ -357,7 +357,7 @@ Load the most specific CLAUDE.md first, then follow its "Related Contexts" links
 |------|----------------|
 | [docs/desktop/CLAUDE.md](docs/desktop/CLAUDE.md) | Desktop runtimes (local/docker/k8s), sync, permissions, notifications, TUI |
 | [docs/apps/CLAUDE.md](docs/apps/CLAUDE.md) | Tesslate Apps: publish, install, approval pipeline, billing, yank, fork, bundles |
-| [docs/packages/CLAUDE.md](docs/packages/CLAUDE.md) | `tesslate-agent`, `tesslate-app-sdk`, `tesslate-embed-sdk` submodules |
+| [docs/packages/CLAUDE.md](docs/packages/CLAUDE.md) | `tesslate-agent`, `tesslate-app-sdk`, `tesslate-embed-sdk` in-tree packages |
 | [docs/sdk/CLAUDE.md](docs/sdk/CLAUDE.md) | Top-level `@tesslate/sdk` TypeScript client |
 | [docs/services/btrfs-csi/CLAUDE.md](docs/services/btrfs-csi/CLAUDE.md) | btrfs CSI driver + Volume Hub (Go) |
 | [docs/services/tsinit/CLAUDE.md](docs/services/tsinit/CLAUDE.md) | In-container supervisor |

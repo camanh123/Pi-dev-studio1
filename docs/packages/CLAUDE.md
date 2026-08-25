@@ -17,6 +17,8 @@ Documents the `packages/` directory at the repo root. Each package is a standalo
 
 Primary agent runner used by both the cloud worker and the desktop sidecar. Single-process, batteries-included, zero runtime dependency on the OpenSail orchestrator.
 
+Tracked as normal source under `packages/tesslate-agent/` in Pi-dev-studio1 (not a git submodule). External tesslate-agent repositories remain independent and are not required for local development.
+
 ### Packaging
 
 | File | Role |

@@ -184,7 +184,7 @@ Tag convention: `:production` or `:beta` for first-class images; `:latest` for s
 
 `build` performs these steps:
 
-1. Sync git submodules (the agent runner in `packages/tesslate-agent` is COPY'd into the backend image).
+1. Confirm `packages/tesslate-agent` is present in the checkout (in-tree source; COPY'd into the backend image).
 2. `aws ecr get-login-password | docker login` against `<ECR_REGISTRY>`.
 3. `docker buildx build --platform linux/amd64 --push` in parallel across selected images.
 4. `aws eks update-kubeconfig` with the `eks-deployer` role for the target environment.
@@ -372,7 +372,7 @@ For planned downtime, maintenance windows, draining user pods cleanly, or pausin
 | Certificate stuck `Ready=False` | Cloudflare API token missing DNS edit permission, or wrong zone | Check cert-manager logs; verify the token has `Zone:Zone:Read` and `Zone:DNS:Edit` on the correct zone |
 | Frontend calls go to `/api/api/...` | `api-url` ConfigMap includes `/api` | Set `frontend_api_url = "https://opensail.tesslate.com"` in tfvars (no `/api`) and reapply |
 | Backend pod `CrashLoopBackOff` immediately | Secret rotation broke a required key, or `tesslate-app-secrets` missing a key consumed via `envFrom` | `kubectl describe pod` and `kubectl logs --previous`; check `kubernetes.tf` secret contents |
-| `No module named 'tesslate_agent'` in backend | Git submodule not initialized before `docker build` | `git submodule update --init --recursive`, rebuild (the `build` script handles this automatically) |
+| `No module named 'tesslate_agent'` in backend | `packages/tesslate-agent` missing from the Docker build context | Confirm the in-tree package is present, then rebuild |
 | Volume Hub pods stuck in Terminating | CSI DaemonSet rolled at the same time as Hub | Wait for `tesslate-btrfs-csi-node` rollout to stabilize; the `build compute` and `reload volume-hub` subcommands sequence these correctly |
 | Orphaned `proj-*` namespaces | Project was deleted before its namespace drained | `kubectl get ns \| grep proj-` then `kubectl delete ns proj-<uuid> --context=tesslate-production-eks` |
 | `terraform apply` times out on Helm resources | cert-manager or external-dns is pending due to DNS issues | Apply with `-target=module.eks` first, then re-run full apply once cluster is Ready |

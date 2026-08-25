@@ -34,8 +34,8 @@ RUN install -m 0755 -d /etc/apt/keyrings \
 COPY orchestrator/pyproject.toml ./
 COPY orchestrator/app ./app
 
-# tesslate-agent submodule: the primary agent runner, imported at module
-# load time by services/tesslate_agent_adapter.py and agent/tools/
+# tesslate-agent in-tree package: the primary agent runner, imported at
+# module load time by services/tesslate_agent_adapter.py and agent/tools/
 # delegation_ops/task_tool.py. Installing it before the orchestrator's own
 # pip install keeps import resolution deterministic and lets this layer
 # cache independently of orchestrator source changes.
