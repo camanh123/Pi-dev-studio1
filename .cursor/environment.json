@@ -1,0 +1,5 @@
+{
+  "repositoryDependencies": [
+    "github.com/camanh123/tesslate-agent"
+  ]
+}
